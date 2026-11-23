@@ -1,0 +1,10 @@
+{
+  "name": "kumquat-reference-scene",
+  "private": true,
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "devDependencies": {
+    "three": "0.180.0"
+  }
+}
