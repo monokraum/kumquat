@@ -334,7 +334,7 @@ enableLosDrag(mapViewport, () => {
 
 async function initializeRenderer() {
   if (!window.isSecureContext) {
-    throw new Error('WebGPU requiert un contexte sécurisé. Ouvrez l’adresse 127.0.0.1 affichée par le lanceur Node.js.')
+    throw new Error('WebGPU requiert un contexte sécurisé. Ouvrez app/index.html depuis le dossier décompressé ou utilisez l’adresse affichée par le lanceur Node.js.')
   }
   if (!navigator.gpu) {
     throw new Error('Le navigateur n’expose pas l’API WebGPU. Vérifiez l’accélération graphique dans chrome://gpu ou edge://gpu.')

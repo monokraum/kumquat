@@ -4,7 +4,9 @@ Kumquat compare deux projections sphériques au rendu direct d’une scène GLB 
 
 ## Lancer le livrable hors ligne
 
-Copier le dossier `kumquat-offline`, ouvrir un terminal dans ce dossier et lancer `node launch.mjs`. Ouvrir ensuite `http://127.0.0.1:8080` dans Edge ou Chrome. Node.js et le navigateur déjà présents suffisent. Pour choisir un autre port, utiliser par exemple `node launch.mjs 8090`.
+Décompresser le ZIP sur le poste cible et ouvrir `app/index.html` dans Edge ou Chrome. Le navigateur peut ouvrir ce fichier depuis son menu ou par glisser-déposer. Garder le dossier `app` entier pour que la page retrouve le script et la feuille de style. Ce mode fonctionne sans serveur local ni installation.
+
+Pour utiliser le serveur HTTP inclus, ouvrir un terminal dans le dossier `kumquat-offline`, lancer `node launch.mjs`, puis ouvrir `http://127.0.0.1:8080`. Pour choisir un autre port, utiliser par exemple `node launch.mjs 8090`.
 
 ## Utiliser le MVP
 
@@ -20,7 +22,7 @@ L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Le
 
 ## Vérifier le poste cible
 
-1. Couper l’accès réseau externe, lancer le livrable et contrôler **WebGPU actif**. Dans `edge://gpu` ou `chrome://gpu`, vérifier que WebGPU est **Hardware accelerated**.
+1. Couper l’accès réseau externe, ouvrir `app/index.html` et contrôler **WebGPU actif**. Dans `edge://gpu` ou `chrome://gpu`, vérifier que WebGPU est **Hardware accelerated**.
 2. Comparer les onglets **Vue reprojetée** et **Rendu direct** de face, à 45° de lacet pour la jonction de cubemap et à 90° de tangage pour le pôle.
 3. Choisir **Équirectangulaire** et passer de 179° à −179° de lacet avec le tangage et le roulis à zéro. Le panneau violet arrière doit rester continu de part et d’autre du raccord.
 4. Recentrer la visée et régler l’écart interoculaire à zéro. Les vues des deux yeux doivent alors coïncider. Revenir à 63 mm pour retrouver la parallaxe de l’objet proche.
