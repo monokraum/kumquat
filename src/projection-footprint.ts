@@ -1,5 +1,5 @@
 import { Vector3 } from 'three/webgpu'
-import { FACES, IMAGE, orientationFor } from './camera'
+import { FACES, imageBorderRays, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
 import { CUBE_CROSS, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH } from './projection-layout'
 import type { Projection } from './projection-layout'
@@ -9,12 +9,7 @@ interface Point {
   y: number
 }
 
-const edgeRays = [
-  [-0.5, -0.5],
-  [IMAGE.width - 0.5, -0.5],
-  [IMAGE.width - 0.5, IMAGE.height - 0.5],
-  [-0.5, IMAGE.height - 0.5],
-].map(([x, y]) => new Vector3((x - IMAGE.cx) / IMAGE.focal, (IMAGE.cy - y) / IMAGE.focal, -1))
+const edgeRays = imageBorderRays()
 
 function cubemapEdge(start: Vector3, end: Vector3, faceIndex: number): Point[] {
   const { forward, right, up } = FACES[faceIndex]

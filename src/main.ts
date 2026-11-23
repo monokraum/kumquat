@@ -1,8 +1,11 @@
 import { WebGPURenderer } from 'three/webgpu'
 import type { Scene } from 'three/webgpu'
+import { FRAME } from './camera'
 import { createPipeline } from './pipeline'
+import type { FrameRegion, StereoView } from './pipeline'
 import type { Projection } from './projection-layout'
 import { createProjectionView } from './projection-view'
+import { createSceneExplorer } from './scene-explorer'
 import { defaultReference, disposeScene, readScene, referenceBytes, referenceScenes } from './scenes'
 import './style.css'
 
@@ -11,25 +14,45 @@ function element<T extends HTMLElement>(id: string) {
 }
 
 const backend = element('backend')
+const backendBadge = backend.parentElement!
+const workspace = element('workspace')
 const viewport = element('viewport')
 const status = element('render-status')
 const sceneName = element('scene-name')
+const sceneControls = element<HTMLFieldSetElement>('scene-controls')
 const controls = element<HTMLFieldSetElement>('controls')
 const file = element<HTMLInputElement>('scene-file')
 const reference = element<HTMLSelectElement>('reference')
 const projection = element<HTMLSelectElement>('projection')
+const projectionKind = element('projection-kind')
 const yaw = element<HTMLInputElement>('yaw')
 const pitch = element<HTMLInputElement>('pitch')
 const roll = element<HTMLInputElement>('roll')
 const baseline = element<HTMLInputElement>('baseline')
-const previewEye = element<HTMLSelectElement>('projection-eye')
+const stereoControls = element('stereo-controls')
+const stereoPanel = element('stereo-panel')
+const mapPanel = element('projection-panel')
+const mapViewport = element('projection-preview')
+const stereoCanvas = element('stereo-canvas')
+const eyeFrames = [element('frame-left'), element('frame-right')] as const
+const previewEyes = element<HTMLFieldSetElement>('projection-eyes')
+const scenePanel = element('scene-panel')
+const sceneViewport = element('scene-viewport')
+const sceneLos = element('scene-los')
+const sceneReset = element<HTMLButtonElement>('scene-reset')
+const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#view-tabs [role=tab]'))
+const fullscreen = element<HTMLButtonElement>('fullscreen')
 const projectionView = createProjectionView(
-  element('projection-preview'),
+  mapViewport,
   element<HTMLCanvasElement>('projection-map'),
   element<HTMLCanvasElement>('projection-outline'),
   element('projection-status'),
 )
+type WorkspaceView = StereoView | 'scene'
+let view: WorkspaceView = 'reprojected'
+let renderer: WebGPURenderer | undefined
 let pipeline: ReturnType<typeof createPipeline> | undefined
+let explorer: ReturnType<typeof createSceneExplorer> | undefined
 let scene: Scene | undefined
 let activeReference = ''
 let loadVersion = 0
@@ -53,16 +76,81 @@ function numberValue(control: HTMLInputElement, fallback: number) {
   return Number.isFinite(value) ? Math.min(Number(control.max), Math.max(Number(control.min), value)) : fallback
 }
 
+function showView(next: WorkspaceView) {
+  if (next !== view) endLosDrag()
+  view = next
+  document.body.dataset.view = view
+  scenePanel.hidden = view !== 'scene'
+  stereoPanel.hidden = view === 'scene'
+  stereoControls.hidden = view === 'scene'
+  mapPanel.hidden = view !== 'reprojected'
+  projection.disabled = view !== 'reprojected'
+  element('projection-control').dataset.inactive = String(projection.disabled)
+  if (view !== 'scene') {
+    stereoPanel.setAttribute('aria-labelledby', `tab-${view}`)
+    const label = view === 'direct' ? 'Rendu direct' : 'Vue reprojetée'
+    document.querySelectorAll('.view-kind').forEach((node) => { node.textContent = label })
+  }
+  for (const tab of tabs) {
+    const selected = tab.dataset.view === view
+    tab.setAttribute('aria-selected', String(selected))
+    tab.tabIndex = selected ? 0 : -1
+  }
+  schedule()
+}
+
+function fitFrame(frame: HTMLElement, surface: DOMRect, scaleX: number, scaleY: number): FrameRegion {
+  const rect = frame.getBoundingClientRect()
+  const scale = Math.max(.001, Math.min(rect.width / FRAME.width, rect.height / FRAME.height))
+  const width = FRAME.width * scale
+  const height = FRAME.height * scale
+  return [
+    (rect.left - surface.left + (rect.width - width) / 2) * scaleX,
+    (rect.top - surface.top + (rect.height - height) / 2) * scaleY,
+    width * scaleX,
+    height * scaleY,
+  ]
+}
+
+const angleFormat = new Intl.NumberFormat('fr', { maximumFractionDigits: 1 })
+
 function draw(activeScene: Scene) {
-  if (!pipeline) return
-  const mode: Projection = projection.value === 'equirectangular' ? 'equirectangular' : 'cubemap'
+  if (!renderer || !pipeline || !explorer) return
+  const host = view === 'scene' ? sceneViewport : stereoCanvas
+  const surface = host.getBoundingClientRect()
+  if (!surface.width || !surface.height) return
+
+  if (renderer.domElement.parentElement !== host) host.prepend(renderer.domElement)
+  const ratio = Math.min(window.devicePixelRatio, 2)
+  const width = Math.max(1, Math.round(surface.width * ratio))
+  const height = Math.max(1, Math.round(surface.height * ratio))
+  if (renderer.domElement.width !== width || renderer.domElement.height !== height) {
+    renderer.setSize(width, height, false)
+  }
+
   const los = { yaw: numberValue(yaw, 0), pitch: numberValue(pitch, 0), roll: numberValue(roll, 0) }
+  const gap = numberValue(baseline, 63)
+  if (view === 'scene') {
+    explorer.draw(activeScene, los, gap, width / height)
+    sceneLos.textContent = [los.yaw, los.pitch, los.roll].map((value) => angleFormat.format(value) + '°').join(' · ')
+    return
+  }
+
+  const mode: Projection = projection.value === 'equirectangular' ? 'equirectangular' : 'cubemap'
+  const scaleX = width / surface.width
+  const scaleY = height / surface.height
   const revision = pipeline.draw(activeScene, {
+    view,
+    frames: [fitFrame(eyeFrames[0], surface, scaleX, scaleY), fitFrame(eyeFrames[1], surface, scaleX, scaleY)],
     projection: mode,
     los,
-    baseline: numberValue(baseline, 63),
+    baseline: gap,
   })
-  projectionView.update({ projection: mode, eye: previewEye.value === 'right' ? 1 : 0, revision, los }, pipeline.readProjection)
+  if (view === 'reprojected') {
+    const eye = previewEyes.querySelector<HTMLInputElement>('input:checked')?.value === 'right' ? 1 : 0
+    projectionKind.textContent = projection.selectedOptions[0].text
+    projectionView.update({ projection: mode, eye, revision, los }, pipeline.readProjection)
+  }
 }
 
 function schedule() {
@@ -90,13 +178,15 @@ async function load(name: string, source: () => Promise<ArrayBuffer>, referenceI
     draw(next)
     if (scene) disposeScene(scene)
     scene = next
+    explorer?.setScene(scene)
     next = undefined
     activeReference = referenceId
     reference.value = referenceId
-    sceneName.textContent = name
-    sceneName.hidden = Boolean(referenceId)
+    sceneName.textContent = referenceId && referenceId === defaultReference?.id ? 'Scène de référence' : name
+    sceneName.title = name
     viewport.dataset.ready = 'true'
-    previewEye.disabled = false
+    previewEyes.disabled = false
+    sceneReset.disabled = false
     message('')
   } catch (error) {
     if (version === loadVersion) {
@@ -126,7 +216,42 @@ file.addEventListener('change', () => {
 })
 reference.addEventListener('change', () => void loadReference(reference.value))
 projection.addEventListener('change', schedule)
-previewEye.addEventListener('change', schedule)
+previewEyes.addEventListener('change', schedule)
+sceneReset.addEventListener('click', () => explorer?.reset())
+
+for (const [index, tab] of tabs.entries()) {
+  tab.addEventListener('click', () => showView(tab.dataset.view as WorkspaceView))
+  tab.addEventListener('keydown', (event) => {
+    const destination = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+      : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+      : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : undefined
+    if (destination === undefined) return
+    event.preventDefault()
+    tabs[destination].focus()
+    showView(tabs[destination].dataset.view as WorkspaceView)
+  })
+}
+
+fullscreen.hidden = !document.fullscreenEnabled
+fullscreen.addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+    else await document.documentElement.requestFullscreen()
+  } catch (error) {
+    message(`Plein écran indisponible. ${errorMessage(error)}`, true)
+  }
+})
+document.addEventListener('fullscreenchange', () => {
+  const active = Boolean(document.fullscreenElement)
+  const label = active ? 'Quitter le plein écran' : 'Plein écran'
+  fullscreen.setAttribute('aria-pressed', String(active))
+  fullscreen.setAttribute('aria-label', label)
+  fullscreen.title = label
+  schedule()
+})
+
+const resize = new ResizeObserver(schedule)
+for (const element of [stereoCanvas, sceneViewport, ...eyeFrames]) resize.observe(element)
 ;[yaw, pitch, roll, baseline].forEach((control) => {
   control.addEventListener('input', schedule)
   control.addEventListener('change', () => {
@@ -141,37 +266,70 @@ element('reset').addEventListener('click', () => {
   schedule()
 })
 
-viewport.addEventListener('dragover', (event) => {
-  if (!controls.disabled && event.dataTransfer?.types.includes('Files')) event.preventDefault()
+workspace.addEventListener('dragover', (event) => {
+  if (!sceneControls.disabled && event.dataTransfer?.types.includes('Files')) event.preventDefault()
 })
-viewport.addEventListener('drop', (event) => {
-  if (controls.disabled) return
+workspace.addEventListener('drop', (event) => {
+  if (sceneControls.disabled) return
   event.preventDefault()
   openFile(event.dataTransfer?.files[0])
 })
 
-let drag: { id: number; x: number; y: number; yaw: number; pitch: number } | undefined
-viewport.addEventListener('pointerdown', (event) => {
-  if (!scene || event.button !== 0 || drag) return
-  drag = {
-    id: event.pointerId,
-    x: event.clientX,
-    y: event.clientY,
-    yaw: numberValue(yaw, 0),
-    pitch: numberValue(pitch, 0),
-  }
-  viewport.setPointerCapture(event.pointerId)
+interface LosDrag {
+  surface: HTMLElement
+  id: number
+  x: number
+  y: number
+  yaw: number
+  pitch: number
+  degreesPerPixel: number
+}
+
+let drag: LosDrag | undefined
+
+function endLosDrag() {
+  if (!drag) return
+  const { surface, id } = drag
+  drag = undefined
+  if (surface.hasPointerCapture(id)) surface.releasePointerCapture(id)
+}
+
+function enableLosDrag(surface: HTMLElement, dragScale: (event: PointerEvent) => number | undefined) {
+  surface.addEventListener('pointerdown', (event) => {
+    if (!scene || !pipeline || event.button !== 0 || drag) return
+    const degreesPerPixel = dragScale(event)
+    if (degreesPerPixel === undefined) return
+    drag = {
+      surface,
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      yaw: numberValue(yaw, 0),
+      pitch: numberValue(pitch, 0),
+      degreesPerPixel,
+    }
+    surface.setPointerCapture(event.pointerId)
+  })
+  surface.addEventListener('pointermove', (event) => {
+    if (drag?.surface !== surface || event.pointerId !== drag.id) return
+    const heading = drag.yaw + (event.clientX - drag.x) * drag.degreesPerPixel
+    const elevation = drag.pitch - (event.clientY - drag.y) * drag.degreesPerPixel
+    yaw.value = ((((heading + 180) % 360) + 360) % 360 - 180).toFixed(1)
+    pitch.value = Math.max(-90, Math.min(90, elevation)).toFixed(1)
+    schedule()
+  })
+  surface.addEventListener('lostpointercapture', (event) => {
+    if (drag?.surface === surface && event.pointerId === drag.id) drag = undefined
+  })
+}
+
+enableLosDrag(viewport, (event) => {
+  if (event.target instanceof Element && event.target.closest('.eye-frame')) return 0.25
 })
-viewport.addEventListener('pointermove', (event) => {
-  if (event.pointerId !== drag?.id) return
-  const heading = drag.yaw + (event.clientX - drag.x) * 0.25
-  const elevation = drag.pitch - (event.clientY - drag.y) * 0.25
-  yaw.value = ((((heading + 180) % 360) + 360) % 360 - 180).toFixed(1)
-  pitch.value = Math.max(-90, Math.min(90, elevation)).toFixed(1)
-  schedule()
-})
-viewport.addEventListener('lostpointercapture', (event) => {
-  if (event.pointerId === drag?.id) drag = undefined
+enableLosDrag(mapViewport, () => {
+  if (view !== 'reprojected' || mapViewport.dataset.state !== 'ready') return
+  const width = mapViewport.getBoundingClientRect().width
+  if (width > 0) return 360 / width
 })
 
 async function initializeRenderer() {
@@ -209,33 +367,39 @@ async function initializeRenderer() {
 }
 
 async function start() {
-  const { renderer, software } = await initializeRenderer()
-  const onDeviceLost = renderer.onDeviceLost.bind(renderer)
-  renderer.onDeviceLost = (info) => {
+  const { renderer: gpu, software } = await initializeRenderer()
+  renderer = gpu
+  const onDeviceLost = gpu.onDeviceLost.bind(gpu)
+  gpu.onDeviceLost = (info) => {
     onDeviceLost(info)
+    endLosDrag()
     loadVersion++
+    renderer = undefined
     pipeline = undefined
+    sceneControls.disabled = true
     controls.disabled = true
-    previewEye.disabled = true
+    previewEyes.disabled = true
+    sceneReset.disabled = true
     projectionView.reset()
     viewport.dataset.ready = 'false'
-    backend.textContent = 'Backend WebGPU interrompu'
-    backend.dataset.state = 'error'
+    backend.textContent = 'WebGPU interrompu'
+    backendBadge.dataset.state = 'error'
     message('Le périphérique WebGPU a été perdu. Rechargez la page pour relancer le rendu.', true)
   }
-  pipeline = createPipeline(renderer)
-  backend.textContent = software ? 'Backend WebGPU actif · adaptateur logiciel' : 'Backend WebGPU actif'
-  backend.dataset.state = 'ready'
-  renderer.domElement.setAttribute('aria-label', 'Comparaison de la vue reprojetée et du rendu direct pour les deux yeux')
-  viewport.prepend(renderer.domElement)
+  pipeline = createPipeline(gpu)
+  explorer = createSceneExplorer(gpu, sceneViewport, schedule)
+  gpu.domElement.setAttribute('aria-hidden', 'true')
+  backend.textContent = software ? 'WebGPU logiciel' : 'WebGPU actif'
+  backendBadge.dataset.state = 'ready'
+  sceneControls.disabled = false
   controls.disabled = false
   if (defaultReference) await loadReference(defaultReference.id)
   else message('Choisissez un fichier GLB pour afficher une scène.')
 }
 
 void start().catch((error) => {
-  backend.textContent = 'Backend WebGPU indisponible'
-  backend.dataset.state = 'error'
+  backend.textContent = 'WebGPU indisponible'
+  backendBadge.dataset.state = 'error'
   projectionView.reset()
   message(errorMessage(error), true)
 })
