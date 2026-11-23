@@ -5,83 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kumquat · Projection DAS</title>
   </head>
-  <body>
+  <body data-view="reprojected">
     <header class="app-header">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <h1>Projection DAS</h1>
+      <h1 class="sr-only">Kumquat · Projection DAS</h1>
+      <fieldset id="scene-controls" class="scene-controls" disabled>
+        <legend class="sr-only">Scène analysée</legend>
+        <div class="reference-picker">
+          <span class="scene-symbol" aria-hidden="true"></span>
+          <span id="scene-name" class="scene-name" aria-hidden="true">Scène de référence</span>
+          <select id="reference" aria-label="Choisir une scène de référence">
+            <option value="" disabled selected>Scène personnalisée</option>
+          </select>
+        </div>
+        <label class="file-button" for="scene-file"><span class="upload-symbol" aria-hidden="true"></span>Ouvrir un GLB</label>
+        <input id="scene-file" type="file" accept=".glb,model/gltf-binary">
+      </fieldset>
+
+      <nav id="view-tabs" class="view-tabs" aria-label="Vues de l’outil" role="tablist">
+        <button id="tab-reprojected" type="button" role="tab" aria-selected="true" aria-controls="stereo-panel" data-view="reprojected">Vue reprojetée</button>
+        <button id="tab-direct" type="button" role="tab" aria-selected="false" aria-controls="stereo-panel" data-view="direct" tabindex="-1">Rendu direct</button>
+        <button id="tab-scene" type="button" role="tab" aria-selected="false" aria-controls="scene-panel" data-view="scene" tabindex="-1">Scène 3D</button>
+      </nav>
+
+      <div class="system-controls">
+        <div class="backend" role="status" data-state="pending">
+          <span class="backend-dot" aria-hidden="true"></span><span id="backend">WebGPU · initialisation</span>
+        </div>
+        <button id="fullscreen" class="fullscreen" type="button" aria-pressed="false" aria-label="Plein écran" title="Plein écran" hidden>⛶</button>
       </div>
-      <div id="backend" class="backend" role="status" data-state="pending">GPU en cours d’initialisation</div>
     </header>
-    <main class="workspace">
-      <aside class="controls" aria-label="Réglages du rendu">
+
+    <main id="workspace" class="workspace">
+      <aside id="stereo-controls" class="controls" aria-label="Réglages du rendu">
         <fieldset disabled id="controls">
-          <div class="control-group">
-            <h2>Scène</h2>
-            <select id="reference" aria-label="Scène de référence">
-              <option value="" disabled selected>Choisir une scène de référence</option>
-            </select>
-            <div id="scene-name" class="scene-name" hidden></div>
-            <label class="file-button" for="scene-file">Ouvrir un GLB</label>
-            <input id="scene-file" type="file" accept=".glb,model/gltf-binary">
-          </div>
-          <div class="control-group">
-            <h2><label for="projection">Projection</label></h2>
+          <div id="projection-control" class="control-group">
+            <label for="projection">Projection</label>
             <select id="projection">
               <option value="cubemap">Cubemap</option>
               <option value="equirectangular">Équirectangulaire</option>
             </select>
           </div>
-          <div class="control-group">
+          <div class="control-group los-controls">
             <div class="control-heading">
               <h2>Ligne de visée</h2>
-              <button id="reset" type="button" class="text-button small">Centrer</button>
+              <button id="reset" type="button" class="text-button">Centrer</button>
             </div>
             <div class="angle-fields">
-              <label>Lacet <span><input id="yaw" type="number" value="0" min="-180" max="180" step="0.1">°</span></label>
-              <label>Tangage <span><input id="pitch" type="number" value="0" min="-90" max="90" step="0.1">°</span></label>
-              <label>Roulis <span><input id="roll" type="number" value="0" min="-180" max="180" step="0.1">°</span></label>
+              <label>Lacet <span><input id="yaw" type="number" value="0" min="-180" max="180" step="0.1"><span aria-hidden="true">°</span></span></label>
+              <label>Tangage <span><input id="pitch" type="number" value="0" min="-90" max="90" step="0.1"><span aria-hidden="true">°</span></span></label>
+              <label>Roulis <span><input id="roll" type="number" value="0" min="-180" max="180" step="0.1"><span aria-hidden="true">°</span></span></label>
             </div>
           </div>
-          <div class="control-group">
-            <h2><label for="baseline">Écart interoculaire</label></h2>
-            <label class="baseline"><input id="baseline" type="number" value="63" min="0" max="200" step="1"><span>mm</span></label>
+          <div class="control-group baseline-controls">
+            <label for="baseline">Écart interoculaire</label>
+            <div class="baseline"><input id="baseline" type="number" value="63" min="0" max="200" step="1"><span aria-hidden="true">mm</span></div>
           </div>
+          <p class="hint">Glisser sur <span class="map-hint">la carte ou </span>une trame pour orienter la ligne de visée.</p>
         </fieldset>
       </aside>
-      <section class="comparison" aria-label="Comparaison des vues">
-        <div class="comparison-header"><h2>Comparaison</h2><span>1600 × 1024 dans 1920 × 1080 · par œil</span></div>
-        <div class="views">
-          <div class="column-title">Vue reprojetée</div>
-          <div class="column-title">Rendu direct</div>
-          <div id="viewport" class="viewport" data-ready="false">
-            <div class="eye eye-left" aria-hidden="true">Œil gauche</div>
-            <div class="eye eye-right" aria-hidden="true">Œil droit</div>
-            <p id="render-status" class="render-status" role="status" aria-live="polite">Initialisation du rendu…</p>
-          </div>
-        </div>
-        <p class="hint">Glisser dans les vues pour orienter la ligne de visée.</p>
-        <section class="projection-panel" aria-labelledby="projection-heading">
+
+      <section id="stereo-panel" class="stereo-panel" role="tabpanel" aria-labelledby="tab-reprojected">
+        <section id="projection-panel" class="projection-panel surface" aria-labelledby="projection-heading">
           <div class="projection-header">
-            <div>
+            <div class="projection-title">
               <h2 id="projection-heading">Carte de projection</h2>
-              <p class="projection-legend">Champ de vision de la caméra</p>
+              <span id="projection-kind">Cubemap</span>
             </div>
-            <label class="projection-eye-control" for="projection-eye">
-              Œil affiché
-              <select id="projection-eye" disabled>
-                <option value="left" selected>Gauche</option>
-                <option value="right">Droit</option>
-              </select>
-            </label>
+            <div class="projection-actions">
+              <p class="projection-legend">Champ de la caméra</p>
+              <fieldset id="projection-eyes" class="projection-eyes" disabled>
+                <legend class="sr-only">Œil affiché sur la carte</legend>
+                <label><input type="radio" name="projection-eye" value="left" checked><span>Œil gauche</span></label>
+                <span aria-hidden="true">/</span>
+                <label><input type="radio" name="projection-eye" value="right"><span>Œil droit</span></label>
+              </fieldset>
+            </div>
           </div>
-          <div id="projection-preview" class="projection-preview" data-projection="cubemap" data-state="loading">
-            <canvas id="projection-map" role="img" aria-label="Carte de projection" width="1024" height="768"></canvas>
-            <canvas id="projection-outline" aria-hidden="true" width="1024" height="768"></canvas>
-            <p id="projection-status" role="status" aria-live="polite">Chargement de la carte…</p>
+          <div class="projection-area">
+            <div id="projection-preview" class="projection-preview" data-projection="cubemap" data-state="loading">
+              <canvas id="projection-map" role="img" aria-label="Carte de projection" width="1024" height="768"></canvas>
+              <canvas id="projection-outline" aria-hidden="true" width="1024" height="768"></canvas>
+              <p id="projection-status" class="projection-status" role="status">Chargement de la carte…</p>
+            </div>
           </div>
         </section>
+
+        <div id="viewport" class="stereo-pair" data-ready="false">
+          <article class="eye-card surface">
+            <header class="eye-header">
+              <h2><span class="eye-dot left" aria-hidden="true"></span>Œil gauche</h2>
+              <span class="view-kind">Vue reprojetée</span>
+              <span class="frame-size">1600 × 1024 · trame 1920 × 1080</span>
+            </header>
+            <div id="frame-left" class="eye-frame"></div>
+          </article>
+          <article class="eye-card surface">
+            <header class="eye-header">
+              <h2><span class="eye-dot right" aria-hidden="true"></span>Œil droit</h2>
+              <span class="view-kind">Vue reprojetée</span>
+              <span class="frame-size">1600 × 1024 · trame 1920 × 1080</span>
+            </header>
+            <div id="frame-right" class="eye-frame"></div>
+          </article>
+          <div id="stereo-canvas" class="render-layer"></div>
+        </div>
       </section>
+
+      <section id="scene-panel" class="scene-panel surface" role="tabpanel" aria-labelledby="tab-scene" hidden>
+        <div id="scene-viewport" class="scene-viewport" tabindex="0" aria-label="Caméra libre dans la scène 3D"></div>
+        <div class="scene-hud scene-legend">
+          <strong>Caméra libre</strong>
+          <span><span class="eye-dot left" aria-hidden="true"></span>Œil gauche</span>
+          <span><span class="eye-dot right" aria-hidden="true"></span>Œil droit</span>
+        </div>
+        <div class="scene-hud scene-los"><span>Ligne de visée</span><output id="scene-los" aria-label="Lacet, tangage et roulis">0° · 0° · 0°</output></div>
+        <div class="scene-hud scene-actions">
+          <button id="scene-reset" type="button" class="text-button" disabled><span aria-hidden="true">↶</span> Recentrer</button>
+          <span class="scene-gestures">Glisser pour orbiter · Maj + glisser pour déplacer · Molette pour zoomer</span>
+        </div>
+      </section>
+      <p id="render-status" class="render-status" role="status">Initialisation du rendu…</p>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

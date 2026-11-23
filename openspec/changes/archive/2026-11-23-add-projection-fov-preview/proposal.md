@@ -2,19 +2,20 @@
 
 ## Why
 
-Les quatre vues de comparaison montrent le résultat de la reprojection. Une carte de la projection permet aussi de situer la zone utilisée par la caméra lorsque sa ligne de visée change.
+Une carte de la projection permet de situer la zone utilisée par la caméra lorsque sa ligne de visée change.
 
 ## What Changes
 
-- Ajouter une cinquième vue sous les vues de comparaison. Elle affiche le panorama équirectangulaire ou les six faces de la cubemap dépliées en croix.
+- Ajouter une carte qui affiche le panorama équirectangulaire ou les six faces de la cubemap dépliées en croix. Elle se trouve au-dessus des trames de l’onglet Vue reprojetée.
 - Afficher la projection de l’œil gauche par défaut, avec un sélecteur gauche/droite pour l’aperçu.
 - Superposer l’empreinte du champ de vision et suivre le lacet, le tangage et le roulis jusque sur les raccords.
+- Permettre de piloter la ligne de visée en glissant directement sur la carte.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `projection-fov-preview` : aperçu de la projection sélectionnée et localisation du champ de vision.
+- `projection-fov-preview` : aperçu de la projection sélectionnée, localisation du champ de vision et pilotage de la visée.
 
 ### Modified Capabilities
 

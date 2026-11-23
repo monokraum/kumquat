@@ -19,6 +19,19 @@ export function createReferenceCamera() {
   return new PerspectiveCamera(verticalFov, IMAGE.width / IMAGE.height, 0.01, 10_000)
 }
 
+export function eyeOffset(index: number, baseline: number) {
+  return (index - 0.5) * baseline / 1000
+}
+
+export function imageBorderRays() {
+  return [
+    [-0.5, -0.5],
+    [IMAGE.width - 0.5, -0.5],
+    [IMAGE.width - 0.5, IMAGE.height - 0.5],
+    [-0.5, IMAGE.height - 0.5],
+  ].map(([x, y]) => new Vector3((x - IMAGE.cx) / IMAGE.focal, (IMAGE.cy - y) / IMAGE.focal, -1))
+}
+
 export const FACES = [
   { forward: new Vector3(1, 0, 0), up: new Vector3(0, 1, 0) },
   { forward: new Vector3(-1, 0, 0), up: new Vector3(0, 1, 0) },
