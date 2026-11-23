@@ -3,7 +3,7 @@ import type { Scene } from 'three/webgpu'
 import { FRAME } from './camera'
 import { createPipeline } from './pipeline'
 import type { FrameRegion, StereoView } from './pipeline'
-import type { Projection } from './projection-layout'
+import { isProjection } from './projection-layout'
 import { createProjectionView } from './projection-view'
 import { createSceneExplorer } from './scene-explorer'
 import { defaultReference, disposeScene, readScene, referenceBytes, referenceScenes } from './scenes'
@@ -136,7 +136,7 @@ function draw(activeScene: Scene) {
     return
   }
 
-  const mode: Projection = projection.value === 'equirectangular' ? 'equirectangular' : 'cubemap'
+  const mode = isProjection(projection.value) ? projection.value : 'cubemap'
   const scaleX = width / surface.width
   const scaleY = height / surface.height
   const revision = pipeline.draw(activeScene, {

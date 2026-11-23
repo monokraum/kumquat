@@ -1,6 +1,6 @@
 import type { LineOfSight } from './camera'
 import { projectionFootprint } from './projection-footprint'
-import { CUBE_CROSS, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH } from './projection-layout'
+import { CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH, PROJECTION_MAP_LABELS } from './projection-layout'
 import type { Eye, Projection } from './projection-layout'
 import type { createProjectionReadback } from './projection-readback'
 
@@ -28,7 +28,7 @@ export function createProjectionView(
   function drawOutline(projection: Projection, los: LineOfSight) {
     overlay.clearRect(0, 0, outline.width, outline.height)
     overlay.save()
-    if (projection === 'cubemap') {
+    if (hasCubeFaces(projection)) {
       overlay.beginPath()
       for (const { column, row } of CUBE_CROSS) {
         overlay.rect(column * PREVIEW_FACE_SIZE, row * PREVIEW_FACE_SIZE, PREVIEW_FACE_SIZE, PREVIEW_FACE_SIZE)
@@ -79,7 +79,7 @@ export function createProjectionView(
         const image = background.createImageData(map.width, map.height)
         image.data.set(pixels)
         background.putImageData(image, 0, 0)
-        if (projection === 'cubemap') labelFaces()
+        if (hasCubeFaces(projection)) labelFaces()
         viewport.dataset.state = 'ready'
         status.textContent = ''
       } catch (error) {
@@ -102,7 +102,7 @@ export function createProjectionView(
       status.textContent = 'Chargement de la carte…'
       map.width = outline.width = PREVIEW_WIDTH
       map.height = outline.height = PREVIEW_HEIGHT[projection]
-      const layout = projection === 'cubemap' ? 'Cubemap en croix' : 'Panorama équirectangulaire'
+      const layout = PROJECTION_MAP_LABELS[projection]
       map.setAttribute('aria-label', `${layout} et champ de vision de l’œil ${eye === 0 ? 'gauche' : 'droit'}`)
       pending = { settings, generation: ++generation, read }
       void readPending()

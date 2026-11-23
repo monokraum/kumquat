@@ -1,6 +1,6 @@
 # Kumquat · Projection DAS
 
-Kumquat compare deux projections sphériques au rendu direct d’une scène GLB locale dans Edge ou Chrome.
+Kumquat compare quatre projections sphériques au rendu direct d’une scène GLB locale dans Edge ou Chrome.
 
 ## Lancer le livrable hors ligne
 
@@ -18,7 +18,14 @@ Les onglets occupent la fenêtre sans défilement. Le bouton en haut à droite a
 - **Rendu direct** affiche les deux rendus directs suréchantillonnés. Les réglages de visée et d’écart interoculaire sont communs aux deux onglets. Régler la visée au clavier ou en glissant sur une trame. Un lacet positif vise vers la droite et un tangage positif vers le haut.
 - **Scène 3D** affiche la scène et les deux volumes de visée. Glisser pour orbiter, tenir Maj en glissant pour déplacer la caméra, utiliser la molette pour zoomer. **Recentrer** recadre la scène. La caméra d’inspection est indépendante des caméras d’analyse.
 
-L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Les aperçus conservent ce rapport d’aspect. L’écart interoculaire par défaut est de 63 mm. Les projections sont calculées à 1024 × 1024 par face pour la cubemap et à 4096 × 2048 pour l’équirectangulaire. Le rendu direct utilise quatre échantillons par pixel.
+L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Les aperçus conservent ce rapport d’aspect. L’écart interoculaire par défaut est de 63 mm. Le rendu direct utilise quatre échantillons par pixel.
+
+| Projection | Résolution par œil | Carte |
+| --- | --- | --- |
+| Cubemap | 6 faces de 1024 × 1024 | Croix |
+| Équirectangulaire | 4096 × 2048 | Panorama |
+| Cubemap équiangulaire (EAC) | 6 faces de 1024 × 1024 | Croix |
+| Octaédrique | 2508 × 2508 | Carré, avec l’avant au centre et l’arrière replié aux bords |
 
 ## Vérifier le poste cible
 
@@ -28,6 +35,7 @@ L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Le
 4. Recentrer la visée et régler l’écart interoculaire à zéro. Les vues des deux yeux doivent alors coïncider. Revenir à 63 mm pour retrouver la parallaxe de l’objet proche.
 5. Dans la carte de projection, sélectionner l’œil droit. Vérifier que le contour passe sur deux faces en cubemap à 45° de lacet, puis apparaît sur les deux bords du panorama à 179° en équirectangulaire.
 6. Ouvrir **Scène 3D**. Tester les mouvements de caméra et le recentrage, puis revenir dans un onglet stéréo pour retrouver les réglages d’analyse.
+7. Choisir **Cubemap équiangulaire (EAC)** et vérifier le raccord à 45° de lacet. Choisir **Octaédrique**, viser à 179° de lacet puis glisser sur la carte. Le contour arrière se répartit près des coins du carré et les deux trames suivent la visée.
 
 Si Chrome sous Linux affiche **Aucun adaptateur WebGPU**, vérifier que l’accélération graphique est activée dans `chrome://settings/system`, puis redémarrer Chrome. Consulter la ligne WebGPU et la section **Problems Detected** dans `chrome://gpu`. Le message de l’application indique à quelle étape le démarrage s’arrête.
 

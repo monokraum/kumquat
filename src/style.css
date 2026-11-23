@@ -114,6 +114,7 @@ body[data-view="direct"] .stereo-panel { grid-template-rows: minmax(0, 1fr); ali
 .projection-area { display: grid; place-items: center; container-type: size; min-height: 0; margin-top: .45rem; }
 .projection-preview { position: relative; width: min(100%, calc(100cqh * 4 / 3)); aspect-ratio: 4 / 3; }
 .projection-preview[data-projection="equirectangular"] { width: min(100%, calc(100cqh * 2)); aspect-ratio: 2; }
+.projection-preview[data-projection="octahedral"] { width: min(100%, 100cqh); aspect-ratio: 1; }
 .projection-preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .projection-preview[data-state="ready"] { cursor: grab; touch-action: none; }
 .projection-preview[data-state="ready"]:active { cursor: grabbing; }

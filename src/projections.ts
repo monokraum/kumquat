@@ -6,7 +6,7 @@ export const FACE_SIZE = 1024
 export const PANORAMA = { width: 4096, height: 2048 }
 type ShaderValue = ReturnType<typeof vec3>
 
-export function cubemapSampler(textures: Texture[]) {
+export function cubemapSampler(textures: Texture[], size = FACE_SIZE) {
   return Fn<[ShaderValue]>(([direction]) => {
     const magnitude = abs(direction).toVar()
     const dominant = max(magnitude.x, max(magnitude.y, magnitude.z)).toVar()
@@ -16,7 +16,7 @@ export function cubemapSampler(textures: Texture[]) {
       const depth = direction.dot(vec3(forward))
       If(depth.equal(dominant), () => {
         const faceXY = vec2(direction.dot(vec3(right)), direction.dot(vec3(up)).negate()).div(dominant)
-        const texel = floor(faceXY.mul(0.5).add(0.5).mul(FACE_SIZE)).clamp(0, FACE_SIZE - 1)
+        const texel = floor(faceXY.mul(0.5).add(0.5).mul(size)).clamp(0, size - 1)
         color.assign(textureLoad(textures[index], ivec2(texel)))
       })
     })

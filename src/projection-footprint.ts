@@ -1,7 +1,7 @@
 import { Vector3 } from 'three/webgpu'
 import { FACES, imageBorderRays, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
-import { CUBE_CROSS, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH } from './projection-layout'
+import { CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH } from './projection-layout'
 import type { Projection } from './projection-layout'
 
 interface Point {
@@ -11,7 +11,7 @@ interface Point {
 
 const edgeRays = imageBorderRays()
 
-function cubemapEdge(start: Vector3, end: Vector3, faceIndex: number): Point[] {
+function cubemapEdge(start: Vector3, end: Vector3, faceIndex: number, equiangular: boolean): Point[] {
   const { forward, right, up } = FACES[faceIndex]
   const { column, row } = CUBE_CROSS[faceIndex]
   const frontStart = start.dot(forward)
@@ -31,12 +31,17 @@ function cubemapEdge(start: Vector3, end: Vector3, faceIndex: number): Point[] {
   }
   if (enter >= exit) return []
 
-  return [enter, exit].map((t) => {
-    const ray = new Vector3().lerpVectors(start, end, t)
+  const intervals = equiangular ? 16 : 1
+  const mapCoordinate = equiangular
+    ? (value: number) => 0.5 + Math.atan(value) / (Math.PI / 2)
+    : (value: number) => (1 + value) / 2
+  const ray = new Vector3()
+  return Array.from({ length: intervals + 1 }, (_, index) => {
+    ray.lerpVectors(start, end, enter + (exit - enter) * index / intervals)
     const depth = ray.dot(forward)
     return {
-      x: (column + (ray.dot(right) / depth + 1) / 2) * PREVIEW_FACE_SIZE,
-      y: (row + (1 - ray.dot(up) / depth) / 2) * PREVIEW_FACE_SIZE,
+      x: (column + mapCoordinate(ray.dot(right) / depth)) * PREVIEW_FACE_SIZE,
+      y: (row + mapCoordinate(-ray.dot(up) / depth)) * PREVIEW_FACE_SIZE,
     }
   })
 }
@@ -93,13 +98,45 @@ function panoramaEdges(start: Vector3, end: Vector3): Point[][] {
   })
 }
 
+function octahedralEdges(start: Vector3, end: Vector3): Point[][] {
+  const boundaries = [0, 1]
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const crossing = start[axis] / (start[axis] - end[axis])
+    if (crossing > 0 && crossing < 1) boundaries.push(crossing)
+  }
+  boundaries.sort((a, b) => a - b)
+
+  const ray = new Vector3()
+  return boundaries.slice(1).flatMap((to, index) => {
+    const from = boundaries[index]
+    if (to - from < 1e-12) return []
+    ray.lerpVectors(start, end, (from + to) / 2)
+    const folded = ray.z > 0
+    // An edge lying exactly on a rear seam is visible on both copies of that seam.
+    const signsX = folded && Math.abs(ray.x) < 1e-12 ? [-1, 1] : [ray.x < 0 ? -1 : 1]
+    const signsY = folded && Math.abs(ray.y) < 1e-12 ? [-1, 1] : [ray.y > 0 ? -1 : 1]
+    return signsX.flatMap((signX) => signsY.map((signY) => [from, to].map((t) => {
+      ray.lerpVectors(start, end, t)
+      const magnitude = Math.abs(ray.x) + Math.abs(ray.y) + Math.abs(ray.z)
+      const x = ray.x / magnitude
+      const y = -ray.y / magnitude
+      return {
+        x: ((folded ? (1 - Math.abs(y)) * signX : x) + 1) * PREVIEW_WIDTH / 2,
+        y: ((folded ? (1 - Math.abs(x)) * signY : y) + 1) * PREVIEW_HEIGHT.octahedral / 2,
+      }
+    })))
+  })
+}
+
 export function projectionFootprint(projection: Projection, los: LineOfSight): Point[][] {
   const rotation = orientationFor(los)
   const rays = edgeRays.map((ray) => ray.clone().applyQuaternion(rotation))
   return rays.flatMap((start, index) => {
     const end = rays[(index + 1) % rays.length]
-    return projection === 'cubemap'
-      ? FACES.map((_, faceIndex) => cubemapEdge(start, end, faceIndex)).filter((segment) => segment.length)
-      : panoramaEdges(start, end)
+    if (hasCubeFaces(projection)) {
+      return FACES.map((_, faceIndex) => cubemapEdge(start, end, faceIndex, projection === 'equiangular'))
+        .filter((segment) => segment.length)
+    }
+    return projection === 'octahedral' ? octahedralEdges(start, end) : panoramaEdges(start, end)
   })
 }

@@ -7,7 +7,7 @@ Afficher la projection utilisée par la reprojection et permettre de situer et d
 
 ### Requirement: Aperçu par œil dans la page de comparaison
 
-L’onglet Vue reprojetée SHALL afficher la carte au-dessus des deux trames. La carte SHALL afficher la projection de l’œil sélectionné, sous la forme d’un panorama pour l’équirectangulaire ou de six faces dépliées en croix pour la cubemap. L’œil gauche SHALL être sélectionné par défaut.
+L’onglet Vue reprojetée SHALL afficher la carte au-dessus des deux trames. La carte de l’œil choisi SHALL prendre la forme d’un panorama équirectangulaire, de six faces dépliées en croix pour la cubemap et l’EAC, ou d’une carte carrée pour l’octaédrique. L’œil gauche SHALL être sélectionné par défaut.
 
 #### Scenario: Ouverture de la scène de référence
 
@@ -25,13 +25,18 @@ La carte SHALL tracer le contour du champ de vision à partir des paramètres de
 
 #### Scenario: Visée sur une jonction de cubemap
 
-- **WHEN** le champ de vision traverse une jonction de la cubemap
+- **WHEN** le champ de vision traverse une jonction de la cubemap ou de l’EAC
 - **THEN** le contour se poursuit sur les faces touchées et reste à l’intérieur de celles-ci.
 
 #### Scenario: Visée au raccord équirectangulaire
 
 - **WHEN** le champ de vision traverse le raccord du panorama
 - **THEN** le contour se répartit sur les deux bords du panorama sans segment artificiel à travers son centre.
+
+#### Scenario: Visée sur un bord de la carte octaédrique
+
+- **WHEN** le champ de vision traverse une coupure dans l’hémisphère arrière représenté sur les bords du carré
+- **THEN** le contour se poursuit aux emplacements correspondants du carré sans segment artificiel à travers la carte.
 
 #### Scenario: Modification du roulis ou du tangage
 
@@ -40,7 +45,7 @@ La carte SHALL tracer le contour du champ de vision à partir des paramètres de
 
 ### Requirement: Pilotage de la visée depuis la carte
 
-Dans les deux projections, glisser sur la carte SHALL modifier le lacet et le tangage selon le déplacement du pointeur. Le contour, les contrôles d’angle et les deux trames SHALL refléter la même visée pendant le geste. Le lacet SHALL se replier à ±180° et le tangage SHALL rester entre −90° et 90°.
+Dans chaque projection, glisser sur la carte SHALL modifier le lacet et le tangage selon le déplacement du pointeur. Le contour, les contrôles d’angle et les deux trames SHALL refléter la même visée pendant le geste. Le lacet SHALL se replier à ±180° et le tangage SHALL rester entre −90° et 90°.
 
 #### Scenario: Traversée du raccord en glissant
 
@@ -52,3 +57,8 @@ Dans les deux projections, glisser sur la carte SHALL modifier le lacet et le ta
 
 - **WHEN** l’utilisateur glisse sur la carte cubemap
 - **THEN** la visée se déplace aussi quand le pointeur quitte momentanément la carte pendant le geste.
+
+#### Scenario: Déplacement sur l’EAC ou l’octaédrique
+
+- **WHEN** l’utilisateur glisse sur l’une des deux nouvelles cartes
+- **THEN** les angles, le contour et les deux vues évoluent ensemble.
