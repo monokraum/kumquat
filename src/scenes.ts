@@ -1,9 +1,26 @@
 import { AmbientLight, Color, DirectionalLight, LoadingManager, Mesh, Scene, Texture } from 'three/webgpu'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import referenceUrl from '../fixtures/reference-scene/reference-scene.glb?url'
 
-export async function referenceBytes() {
-  const response = await fetch(referenceUrl)
+const referenceFiles = import.meta.glob<string>('../references/*.glb', {
+  eager: true, import: 'default', query: '?url',
+})
+const referenceNames: Record<string, string> = {
+  'reference-scene': 'Scène de calibration',
+  'studio-eclaire': 'Studio éclairé',
+}
+
+export const referenceScenes = Object.entries(referenceFiles).map(([path, url]) => {
+  const id = path.slice(path.lastIndexOf('/') + 1, -'.glb'.length)
+  const name = id.replace(/[-_]+/g, ' ')
+  const label = Object.hasOwn(referenceNames, id)
+    ? referenceNames[id]
+    : name.slice(0, 1).toLocaleUpperCase('fr') + name.slice(1)
+  return { id, label, url }
+})
+export const defaultReference = referenceScenes.find(({ id }) => id === 'reference-scene') ?? referenceScenes[0]
+
+export async function referenceBytes(url: string) {
+  const response = await fetch(url)
   if (!response.ok) throw new Error('Le GLB de référence est indisponible.')
   return response.arrayBuffer()
 }
@@ -22,9 +39,12 @@ export async function readScene(bytes: ArrayBuffer) {
   const gltf = await new GLTFLoader(manager).parseAsync(bytes, '')
   const scene = new Scene()
   scene.background = new Color('#172332')
-  const key = new DirectionalLight(0xffffff, 2)
-  key.position.set(3, 5, 4)
-  scene.add(gltf.scene, new AmbientLight(0xffffff, 1), key)
+  scene.add(gltf.scene)
+  if (!gltf.scene.getObjectByProperty('isLight', true)) {
+    const key = new DirectionalLight(0xffffff, 2)
+    key.position.set(3, 5, 4)
+    scene.add(new AmbientLight(0xffffff, 1), key)
+  }
   return scene
 }
 

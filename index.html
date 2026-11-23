@@ -18,10 +18,12 @@
         <fieldset disabled id="controls">
           <div class="control-group">
             <h2>Scène</h2>
-            <div id="scene-name" class="scene-name"></div>
+            <select id="reference" aria-label="Scène de référence">
+              <option value="" disabled selected>Choisir une scène de référence</option>
+            </select>
+            <div id="scene-name" class="scene-name" hidden></div>
             <label class="file-button" for="scene-file">Ouvrir un GLB</label>
             <input id="scene-file" type="file" accept=".glb,model/gltf-binary">
-            <button id="reference" type="button" class="text-button">Charger la scène de référence</button>
           </div>
           <div class="control-group">
             <h2><label for="projection">Projection</label></h2>

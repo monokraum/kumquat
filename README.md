@@ -8,7 +8,7 @@ Copier le dossier `kumquat-offline`, ouvrir un terminal dans ce dossier et lance
 
 ## Utiliser le MVP
 
-La scène de référence s’ouvre au démarrage. Utiliser **Ouvrir un GLB** ou déposer un fichier sur les vues pour charger une autre scène. Le GLB doit contenir ses ressources. Régler la visée au clavier ou en glissant dans les vues. Un lacet positif vise vers la droite et un tangage positif vers le haut.
+La scène de calibration s’ouvre au démarrage. Le sélecteur de scènes de référence donne aussi accès au **Studio éclairé**. Utiliser **Ouvrir un GLB** ou déposer un fichier sur les vues pour charger un GLB autonome. L’application utilise les lumières du fichier quand elles sont présentes. Régler la visée au clavier ou en glissant dans les vues. Un lacet positif vise vers la droite et un tangage positif vers le haut.
 
 Chaque ligne affiche un œil. La vue reprojetée apparaît à gauche et le rendu direct à droite. L’image est centrée à l’échelle native dans une trame à marges noires. L’écart interoculaire par défaut est de 63 mm. Les résolutions de projection du MVP sont 1024 × 1024 par face de cubemap et 4096 × 2048 pour la carte équirectangulaire. Le rendu direct prend quatre échantillons par pixel.
 
@@ -51,5 +51,5 @@ Le dossier à transférer est `release/kumquat-offline`. La commande `npm run de
 
 - `src/` contient l’interface, la géométrie de caméra et les passes WebGPU.
 - `scripts/` contient l’assemblage et le lanceur Node.js.
-- `fixtures/reference-scene/` contient le GLB et sa source de génération.
+- `references/` contient les scènes GLB intégrées et le générateur. Ajouter un GLB autonome dans ce dossier, puis reconstruire le livrable pour le faire apparaître dans le sélecteur.
 - `openspec/` contient les changements et les spécifications.

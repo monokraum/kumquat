@@ -3,7 +3,7 @@ import type { Scene } from 'three/webgpu'
 import { createPipeline } from './pipeline'
 import type { Projection } from './projection-layout'
 import { createProjectionView } from './projection-view'
-import { disposeScene, readScene, referenceBytes } from './scenes'
+import { defaultReference, disposeScene, readScene, referenceBytes, referenceScenes } from './scenes'
 import './style.css'
 
 function element<T extends HTMLElement>(id: string) {
@@ -16,6 +16,7 @@ const status = element('render-status')
 const sceneName = element('scene-name')
 const controls = element<HTMLFieldSetElement>('controls')
 const file = element<HTMLInputElement>('scene-file')
+const reference = element<HTMLSelectElement>('reference')
 const projection = element<HTMLSelectElement>('projection')
 const yaw = element<HTMLInputElement>('yaw')
 const pitch = element<HTMLInputElement>('pitch')
@@ -30,8 +31,13 @@ const projectionView = createProjectionView(
 )
 let pipeline: ReturnType<typeof createPipeline> | undefined
 let scene: Scene | undefined
+let activeReference = ''
 let loadVersion = 0
 let scheduled = false
+
+for (const { id, label } of referenceScenes) {
+  reference.add(new Option(label, id))
+}
 
 function message(text: string, error = false) {
   status.textContent = text
@@ -74,7 +80,7 @@ function schedule() {
   })
 }
 
-async function load(name: string, source: () => Promise<ArrayBuffer>) {
+async function load(name: string, source: () => Promise<ArrayBuffer>, referenceId = '') {
   const version = ++loadVersion
   message(`Chargement de ${name}…`)
   let next: Scene | undefined
@@ -85,12 +91,16 @@ async function load(name: string, source: () => Promise<ArrayBuffer>) {
     if (scene) disposeScene(scene)
     scene = next
     next = undefined
+    activeReference = referenceId
+    reference.value = referenceId
     sceneName.textContent = name
+    sceneName.hidden = Boolean(referenceId)
     viewport.dataset.ready = 'true'
     previewEye.disabled = false
     message('')
   } catch (error) {
     if (version === loadVersion) {
+      reference.value = activeReference
       const stage = next ? 'Rendu de la scène impossible.' : 'Chargement du GLB impossible.'
       message(`${stage} ${errorMessage(error)}`, true)
       if (!scene) projectionView.reset()
@@ -101,8 +111,9 @@ async function load(name: string, source: () => Promise<ArrayBuffer>) {
   }
 }
 
-function loadReference() {
-  return load('Scène de référence', referenceBytes)
+function loadReference(id: string) {
+  const choice = referenceScenes.find((entry) => entry.id === id)
+  if (choice) return load(choice.label, () => referenceBytes(choice.url), choice.id)
 }
 
 function openFile(selected: File | undefined) {
@@ -113,7 +124,7 @@ file.addEventListener('change', () => {
   openFile(file.files?.[0])
   file.value = ''
 })
-element('reference').addEventListener('click', () => void loadReference())
+reference.addEventListener('change', () => void loadReference(reference.value))
 projection.addEventListener('change', schedule)
 previewEye.addEventListener('change', schedule)
 ;[yaw, pitch, roll, baseline].forEach((control) => {
@@ -218,7 +229,8 @@ async function start() {
   renderer.domElement.setAttribute('aria-label', 'Comparaison de la vue reprojetée et du rendu direct pour les deux yeux')
   viewport.prepend(renderer.domElement)
   controls.disabled = false
-  await loadReference()
+  if (defaultReference) await loadReference(defaultReference.id)
+  else message('Choisissez un fichier GLB pour afficher une scène.')
 }
 
 void start().catch((error) => {
