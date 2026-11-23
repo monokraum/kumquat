@@ -59,6 +59,26 @@
           </div>
         </div>
         <p class="hint">Glisser dans les vues pour orienter la ligne de visée.</p>
+        <section class="projection-panel" aria-labelledby="projection-heading">
+          <div class="projection-header">
+            <div>
+              <h2 id="projection-heading">Carte de projection</h2>
+              <p class="projection-legend">Champ de vision de la caméra</p>
+            </div>
+            <label class="projection-eye-control" for="projection-eye">
+              Œil affiché
+              <select id="projection-eye" disabled>
+                <option value="left" selected>Gauche</option>
+                <option value="right">Droit</option>
+              </select>
+            </label>
+          </div>
+          <div id="projection-preview" class="projection-preview" data-projection="cubemap" data-state="loading">
+            <canvas id="projection-map" role="img" aria-label="Carte de projection" width="1024" height="768"></canvas>
+            <canvas id="projection-outline" aria-hidden="true" width="1024" height="768"></canvas>
+            <p id="projection-status" role="status" aria-live="polite">Chargement de la carte…</p>
+          </div>
+        </section>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>

@@ -5,9 +5,10 @@ import type { Scene, WebGPURenderer } from 'three/webgpu'
 import { Fn, If, ivec2, screenCoordinate, textureLoad, uniform, vec2, vec3, vec4 } from 'three/tsl'
 import { createReferenceCamera, FACES, FRAME, IMAGE, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
+import type { Projection } from './projection-layout'
+import { createProjectionReadback } from './projection-readback'
 import { cubemapSampler, FACE_SIZE, panoramaDirection, PANORAMA, panoramaSampler } from './projections'
 
-export type Projection = 'cubemap' | 'equirectangular'
 type ShaderValue = ReturnType<typeof vec3>
 
 interface RenderSettings {
@@ -42,6 +43,10 @@ function createEye() {
 
 export function createPipeline(renderer: WebGPURenderer) {
   const eyes = [createEye(), createEye()]
+  const readProjection = createProjectionReadback(renderer, eyes.map(({ faces, panorama }) => ({
+    faces: faces.map(({ texture }) => texture),
+    panorama: panorama.texture,
+  })))
   const quad = new QuadMesh()
   const composite = new MeshBasicNodeMaterial({ depthWrite: false, depthTest: false })
   const faceCamera = new PerspectiveCamera(90, 1, 0.01, 10_000)
@@ -53,6 +58,7 @@ export function createPipeline(renderer: WebGPURenderer) {
   const showPanorama = uniform(0)
   let captureScene: Scene | undefined
   let captureBaseline: number | undefined
+  let captureRevision = 0
   let panoramaReady = false
   let previousLos: LineOfSight | undefined
 
@@ -145,7 +151,9 @@ export function createPipeline(renderer: WebGPURenderer) {
     captureScene = scene
     captureBaseline = baseline
     previousLos = { ...los }
+    if (captureChanged) captureRevision++
+    return captureRevision
   }
 
-  return { draw }
+  return { draw, readProjection }
 }

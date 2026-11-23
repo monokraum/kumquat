@@ -12,12 +12,15 @@ La scène de référence s’ouvre au démarrage. Utiliser **Ouvrir un GLB** ou 
 
 Chaque ligne affiche un œil. La vue reprojetée apparaît à gauche et le rendu direct à droite. L’image est centrée à l’échelle native dans une trame à marges noires. L’écart interoculaire par défaut est de 63 mm. Les résolutions de projection du MVP sont 1024 × 1024 par face de cubemap et 4096 × 2048 pour la carte équirectangulaire. Le rendu direct prend quatre échantillons par pixel.
 
+Sous les quatre vues, la **carte de projection** affiche le panorama équirectangulaire ou les six faces de la cubemap. Le contour vert indique le champ de vision courant. Le sélecteur **Œil affiché** change la carte et démarre sur l’œil gauche.
+
 ## Vérifier le poste cible
 
 1. Couper l’accès réseau externe, lancer le livrable et contrôler **Backend WebGPU actif**. Dans `edge://gpu` ou `chrome://gpu`, vérifier que WebGPU est **Hardware accelerated**.
 2. Comparer les vues de la scène de référence de face, à 45° de lacet pour la jonction de cubemap et à 90° de tangage pour le pôle.
 3. Choisir **Équirectangulaire** et passer de 179° à −179° de lacet avec le tangage et le roulis à zéro. Le panneau violet arrière doit rester continu de part et d’autre du raccord.
 4. Recentrer la visée et régler l’écart interoculaire à zéro. Les vues des deux yeux doivent alors coïncider. Revenir à 63 mm pour retrouver la parallaxe de l’objet proche.
+5. Dans la carte de projection, sélectionner l’œil droit. Vérifier que le contour passe sur deux faces en cubemap à 45° de lacet, puis apparaît sur les deux bords du panorama à 179° en équirectangulaire.
 
 Si Chrome sous Linux affiche **Aucun adaptateur WebGPU**, vérifier que l’accélération graphique est activée dans `chrome://settings/system`, puis redémarrer Chrome. Consulter la ligne WebGPU et la section **Problems Detected** dans `chrome://gpu`. Le message de l’application indique à quelle étape le démarrage s’arrête.
 

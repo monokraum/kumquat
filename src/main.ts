@@ -1,6 +1,8 @@
 import { WebGPURenderer } from 'three/webgpu'
 import type { Scene } from 'three/webgpu'
 import { createPipeline } from './pipeline'
+import type { Projection } from './projection-layout'
+import { createProjectionView } from './projection-view'
 import { disposeScene, readScene, referenceBytes } from './scenes'
 import './style.css'
 
@@ -19,6 +21,13 @@ const yaw = element<HTMLInputElement>('yaw')
 const pitch = element<HTMLInputElement>('pitch')
 const roll = element<HTMLInputElement>('roll')
 const baseline = element<HTMLInputElement>('baseline')
+const previewEye = element<HTMLSelectElement>('projection-eye')
+const projectionView = createProjectionView(
+  element('projection-preview'),
+  element<HTMLCanvasElement>('projection-map'),
+  element<HTMLCanvasElement>('projection-outline'),
+  element('projection-status'),
+)
 let pipeline: ReturnType<typeof createPipeline> | undefined
 let scene: Scene | undefined
 let loadVersion = 0
@@ -39,11 +48,15 @@ function numberValue(control: HTMLInputElement, fallback: number) {
 }
 
 function draw(activeScene: Scene) {
-  pipeline?.draw(activeScene, {
-    projection: projection.value === 'equirectangular' ? 'equirectangular' : 'cubemap',
-    los: { yaw: numberValue(yaw, 0), pitch: numberValue(pitch, 0), roll: numberValue(roll, 0) },
+  if (!pipeline) return
+  const mode: Projection = projection.value === 'equirectangular' ? 'equirectangular' : 'cubemap'
+  const los = { yaw: numberValue(yaw, 0), pitch: numberValue(pitch, 0), roll: numberValue(roll, 0) }
+  const revision = pipeline.draw(activeScene, {
+    projection: mode,
+    los,
     baseline: numberValue(baseline, 63),
   })
+  projectionView.update({ projection: mode, eye: previewEye.value === 'right' ? 1 : 0, revision, los }, pipeline.readProjection)
 }
 
 function schedule() {
@@ -74,11 +87,13 @@ async function load(name: string, source: () => Promise<ArrayBuffer>) {
     next = undefined
     sceneName.textContent = name
     viewport.dataset.ready = 'true'
+    previewEye.disabled = false
     message('')
   } catch (error) {
     if (version === loadVersion) {
       const stage = next ? 'Rendu de la scène impossible.' : 'Chargement du GLB impossible.'
       message(`${stage} ${errorMessage(error)}`, true)
+      if (!scene) projectionView.reset()
       schedule()
     }
   } finally {
@@ -100,6 +115,7 @@ file.addEventListener('change', () => {
 })
 element('reference').addEventListener('click', () => void loadReference())
 projection.addEventListener('change', schedule)
+previewEye.addEventListener('change', schedule)
 ;[yaw, pitch, roll, baseline].forEach((control) => {
   control.addEventListener('input', schedule)
   control.addEventListener('change', () => {
@@ -189,6 +205,8 @@ async function start() {
     loadVersion++
     pipeline = undefined
     controls.disabled = true
+    previewEye.disabled = true
+    projectionView.reset()
     viewport.dataset.ready = 'false'
     backend.textContent = 'Backend WebGPU interrompu'
     backend.dataset.state = 'error'
@@ -206,5 +224,6 @@ async function start() {
 void start().catch((error) => {
   backend.textContent = 'Backend WebGPU indisponible'
   backend.dataset.state = 'error'
+  projectionView.reset()
   message(errorMessage(error), true)
 })
