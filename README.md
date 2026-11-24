@@ -1,6 +1,6 @@
 # Kumquat · Projection DAS
 
-Kumquat compare quatre projections sphériques au rendu direct d’une scène GLB locale dans Edge ou Chrome.
+Kumquat compare cinq projections sphériques au rendu direct d’une scène GLB locale dans Edge ou Chrome.
 
 ## Lancer le livrable hors ligne
 
@@ -26,6 +26,9 @@ L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Le
 | Équirectangulaire | 4096 × 2048 | Panorama |
 | Cubemap équiangulaire (EAC) | 6 faces de 1024 × 1024 | Croix |
 | Octaédrique | 2508 × 2508 | Carré, avec l’avant au centre et l’arrière replié aux bords |
+| Stéréographique | Deux cases de 2048 × 2048 | Disques avant et arrière côte à côte |
+
+Active **Repères d’angle** dans la carte pour afficher les mêmes cercles de rayon angulaire de 6° sur les cinq projections. Compare leur forme en passant de **Stéréographique** à **Équirectangulaire**. Les cercles stéréographiques gardent leur forme et leur taille varie selon leur emplacement. Un repère à cheval sur les deux hémisphères apparaît sur les deux disques.
 
 ## Vérifier le poste cible
 
@@ -36,6 +39,7 @@ L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Le
 5. Dans la carte de projection, sélectionner l’œil droit. Vérifier que le contour passe sur deux faces en cubemap à 45° de lacet, puis apparaît sur les deux bords du panorama à 179° en équirectangulaire.
 6. Ouvrir **Scène 3D**. Tester les mouvements de caméra et le recentrage, puis revenir dans un onglet stéréo pour retrouver les réglages d’analyse.
 7. Choisir **Cubemap équiangulaire (EAC)** et vérifier le raccord à 45° de lacet. Choisir **Octaédrique**, viser à 179° de lacet puis glisser sur la carte. Le contour arrière se répartit près des coins du carré et les deux trames suivent la visée.
+8. Choisir **Stéréographique** et passer de 85° à 95° de lacet. Le contour se répartit entre les deux disques et les trames suivent le mouvement. Active **Repères d’angle** et compare le repère à 60° de tangage au même repère en équirectangulaire.
 
 Si Chrome sous Linux affiche **Aucun adaptateur WebGPU**, vérifier que l’accélération graphique est activée dans `chrome://settings/system`, puis redémarrer Chrome. Consulter la ligne WebGPU et la section **Problems Detected** dans `chrome://gpu`. Le message de l’application indique à quelle étape le démarrage s’arrête.
 

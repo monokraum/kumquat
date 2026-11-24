@@ -1,7 +1,7 @@
 import { Vector3 } from 'three/webgpu'
 import { FACES, imageBorderRays, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
-import { CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH } from './projection-layout'
+import { CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH, STEREOGRAPHIC_PREVIEW_RADIUS } from './projection-layout'
 import type { Projection } from './projection-layout'
 
 interface Point {
@@ -10,6 +10,8 @@ interface Point {
 }
 
 const edgeRays = imageBorderRays()
+const angleCircleCenters = [[0, 0], [0, 60], [35, -50], [90, 25], [145, 25], [-155, -30]] as const
+const angleCircleRadius = Math.PI / 30
 
 function cubemapEdge(start: Vector3, end: Vector3, faceIndex: number, equiangular: boolean): Point[] {
   const { forward, right, up } = FACES[faceIndex]
@@ -128,15 +130,52 @@ function octahedralEdges(start: Vector3, end: Vector3): Point[][] {
   })
 }
 
-export function projectionFootprint(projection: Projection, los: LineOfSight): Point[][] {
-  const rotation = orientationFor(los)
-  const rays = edgeRays.map((ray) => ray.clone().applyQuaternion(rotation))
+function stereographicEdges(start: Vector3, end: Vector3): Point[][] {
+  const diskSize = PREVIEW_HEIGHT.stereographic
+  const ray = new Vector3()
+  return [1, -1].flatMap((side) => {
+    const startDepth = -side * start.z
+    const endDepth = -side * end.z
+    if (startDepth < 0 && endDepth < 0) return []
+    const from = startDepth < 0 ? startDepth / (startDepth - endDepth) : 0
+    const to = endDepth < 0 ? startDepth / (startDepth - endDepth) : 1
+    if (from >= to) return []
+    const centerX = (side === 1 ? 0.5 : 1.5) * diskSize
+    return [Array.from({ length: 17 }, (_, index) => {
+      ray.lerpVectors(start, end, from + (to - from) * index / 16)
+      const scale = STEREOGRAPHIC_PREVIEW_RADIUS / (ray.length() - side * ray.z)
+      return { x: centerX + side * ray.x * scale, y: diskSize / 2 - ray.y * scale }
+    })]
+  })
+}
+
+function projectClosedPath(projection: Projection, rays: Vector3[]): Point[][] {
   return rays.flatMap((start, index) => {
     const end = rays[(index + 1) % rays.length]
     if (hasCubeFaces(projection)) {
       return FACES.map((_, faceIndex) => cubemapEdge(start, end, faceIndex, projection === 'equiangular'))
         .filter((segment) => segment.length)
     }
-    return projection === 'octahedral' ? octahedralEdges(start, end) : panoramaEdges(start, end)
+    if (projection === 'octahedral') return octahedralEdges(start, end)
+    if (projection === 'stereographic') return stereographicEdges(start, end)
+    return panoramaEdges(start, end)
+  })
+}
+
+export function projectionFootprint(projection: Projection, los: LineOfSight): Point[][] {
+  const rotation = orientationFor(los)
+  return projectClosedPath(projection, edgeRays.map((ray) => ray.clone().applyQuaternion(rotation)))
+}
+
+export function projectionAngleCircles(projection: Projection): Point[][] {
+  const radius = Math.sin(angleCircleRadius)
+  const depth = -Math.cos(angleCircleRadius)
+  return angleCircleCenters.flatMap(([yaw, pitch]) => {
+    const rotation = orientationFor({ yaw, pitch, roll: 0 })
+    const rays = Array.from({ length: 48 }, (_, index) => {
+      const angle = index * 2 * Math.PI / 48
+      return new Vector3(radius * Math.cos(angle), radius * Math.sin(angle), depth).applyQuaternion(rotation)
+    })
+    return projectClosedPath(projection, rays)
   })
 }

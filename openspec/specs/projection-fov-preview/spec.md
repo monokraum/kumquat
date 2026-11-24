@@ -7,7 +7,7 @@ Afficher la projection utilisée par la reprojection et permettre de situer et d
 
 ### Requirement: Aperçu par œil dans la page de comparaison
 
-L’onglet Vue reprojetée SHALL afficher la carte au-dessus des deux trames. La carte de l’œil choisi SHALL prendre la forme d’un panorama équirectangulaire, de six faces dépliées en croix pour la cubemap et l’EAC, ou d’une carte carrée pour l’octaédrique. L’œil gauche SHALL être sélectionné par défaut.
+L’onglet Vue reprojetée SHALL afficher la carte au-dessus des deux trames. La carte de l’œil choisi SHALL prendre la forme d’un panorama équirectangulaire, de six faces dépliées en croix pour la cubemap et l’EAC, d’une carte carrée pour l’octaédrique, ou de deux disques avant et arrière pour la stéréographique. L’œil gauche SHALL être sélectionné par défaut.
 
 #### Scenario: Ouverture de la scène de référence
 
@@ -38,6 +38,11 @@ La carte SHALL tracer le contour du champ de vision à partir des paramètres de
 - **WHEN** le champ de vision traverse une coupure dans l’hémisphère arrière représenté sur les bords du carré
 - **THEN** le contour se poursuit aux emplacements correspondants du carré sans segment artificiel à travers la carte.
 
+#### Scenario: Visée au raccord stéréographique
+
+- **WHEN** le champ de vision traverse le bord commun des deux hémisphères
+- **THEN** le contour se prolonge sur les deux disques sans segment artificiel entre eux.
+
 #### Scenario: Modification du roulis ou du tangage
 
 - **WHEN** l’utilisateur modifie le roulis ou le tangage
@@ -62,3 +67,22 @@ Dans chaque projection, glisser sur la carte SHALL modifier le lacet et le tanga
 
 - **WHEN** l’utilisateur glisse sur l’une des deux nouvelles cartes
 - **THEN** les angles, le contour et les deux vues évoluent ensemble.
+
+#### Scenario: Déplacement sur la carte stéréographique
+
+- **WHEN** l’utilisateur glisse sur la carte stéréographique et déplace la visée d’un hémisphère à l’autre
+- **THEN** les deux trames, les angles et le contour suivent la nouvelle visée.
+
+### Requirement: Repères de comparaison des angles
+
+La carte SHALL proposer une option « Repères d’angle » pour afficher les mêmes petits cercles de rayon angulaire constant sur chaque projection. Les repères SHALL rester fixes sur la sphère lors du déplacement de la ligne de visée.
+
+#### Scenario: Comparaison de la forme locale
+
+- **WHEN** l’utilisateur active les repères et passe du mode stéréographique au mode équirectangulaire
+- **THEN** les cercles sont ronds dans les disques stéréographiques et les repères proches des pôles sont étirés sur le panorama.
+
+#### Scenario: Désactivation des repères
+
+- **WHEN** l’utilisateur désactive les repères d’angle
+- **THEN** le champ de vision reste visible et les repères disparaissent de la carte.

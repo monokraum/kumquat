@@ -1,6 +1,9 @@
 import type { LineOfSight } from './camera'
-import { projectionFootprint } from './projection-footprint'
-import { CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH, PROJECTION_MAP_LABELS } from './projection-layout'
+import { projectionAngleCircles, projectionFootprint } from './projection-footprint'
+import {
+  CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH, PROJECTION_MAP_LABELS,
+  STEREOGRAPHIC_PREVIEW_RADIUS,
+} from './projection-layout'
 import type { Eye, Projection } from './projection-layout'
 import type { createProjectionReadback } from './projection-readback'
 
@@ -9,6 +12,7 @@ interface PreviewSettings {
   eye: Eye
   revision: number
   los: LineOfSight
+  showAngleCircles: boolean
 }
 
 export function createProjectionView(
@@ -24,8 +28,23 @@ export function createProjectionView(
   let generation = 0
   let reading = false
   let pending: { settings: PreviewSettings; generation: number; read: ReturnType<typeof createProjectionReadback> } | undefined
+  const angleCircles = new Map<Projection, ReturnType<typeof projectionAngleCircles>>()
 
-  function drawOutline(projection: Projection, los: LineOfSight) {
+  function strokePaths(paths: ReturnType<typeof projectionFootprint>, color: string) {
+    overlay.beginPath()
+    for (const [first, ...rest] of paths) {
+      overlay.moveTo(first.x, first.y)
+      for (const { x, y } of rest) overlay.lineTo(x, y)
+    }
+    overlay.lineWidth = 5.5
+    overlay.strokeStyle = '#101821'
+    overlay.stroke()
+    overlay.lineWidth = 2.5
+    overlay.strokeStyle = color
+    overlay.stroke()
+  }
+
+  function drawOutline({ projection, los, showAngleCircles }: PreviewSettings) {
     overlay.clearRect(0, 0, outline.width, outline.height)
     overlay.save()
     if (hasCubeFaces(projection)) {
@@ -34,20 +53,26 @@ export function createProjectionView(
         overlay.rect(column * PREVIEW_FACE_SIZE, row * PREVIEW_FACE_SIZE, PREVIEW_FACE_SIZE, PREVIEW_FACE_SIZE)
       }
       overlay.clip()
-    }
-    overlay.beginPath()
-    for (const [first, ...rest] of projectionFootprint(projection, los)) {
-      overlay.moveTo(first.x, first.y)
-      for (const { x, y } of rest) overlay.lineTo(x, y)
+    } else if (projection === 'stereographic') {
+      overlay.beginPath()
+      const size = PREVIEW_HEIGHT.stereographic
+      for (const centerX of [size / 2, size * 1.5]) {
+        overlay.moveTo(centerX + STEREOGRAPHIC_PREVIEW_RADIUS, size / 2)
+        overlay.arc(centerX, size / 2, STEREOGRAPHIC_PREVIEW_RADIUS, 0, 2 * Math.PI)
+      }
+      overlay.clip()
     }
     overlay.lineCap = 'round'
     overlay.lineJoin = 'round'
-    overlay.lineWidth = 5.5
-    overlay.strokeStyle = '#101821'
-    overlay.stroke()
-    overlay.lineWidth = 2.5
-    overlay.strokeStyle = '#9af2d8'
-    overlay.stroke()
+    if (showAngleCircles) {
+      let paths = angleCircles.get(projection)
+      if (!paths) {
+        paths = projectionAngleCircles(projection)
+        angleCircles.set(projection, paths)
+      }
+      strokePaths(paths, '#ffd07d')
+    }
+    strokePaths(projectionFootprint(projection, los), '#9af2d8')
     overlay.restore()
   }
 
@@ -66,6 +91,14 @@ export function createProjectionView(
     }
   }
 
+  function labelHemispheres() {
+    background.font = '16px ui-monospace, monospace'
+    background.textBaseline = 'top'
+    background.fillStyle = '#eef1f5'
+    background.fillText('Avant', 12, 12)
+    background.fillText('Arrière', PREVIEW_HEIGHT.stereographic + 12, 12)
+  }
+
   async function readPending() {
     if (reading) return
     reading = true
@@ -80,6 +113,7 @@ export function createProjectionView(
         image.data.set(pixels)
         background.putImageData(image, 0, 0)
         if (hasCubeFaces(projection)) labelFaces()
+        else if (projection === 'stereographic') labelHemispheres()
         viewport.dataset.state = 'ready'
         status.textContent = ''
       } catch (error) {
@@ -93,7 +127,7 @@ export function createProjectionView(
   }
 
   function update(settings: PreviewSettings, read: ReturnType<typeof createProjectionReadback>) {
-    const { projection, eye, los, revision } = settings
+    const { projection, eye, revision } = settings
     const source = `${projection}:${eye}:${revision}`
     if (source !== key) {
       key = source
@@ -107,7 +141,7 @@ export function createProjectionView(
       pending = { settings, generation: ++generation, read }
       void readPending()
     }
-    drawOutline(projection, los)
+    drawOutline(settings)
   }
 
   function reset() {

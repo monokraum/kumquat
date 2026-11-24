@@ -36,6 +36,7 @@ const mapViewport = element('projection-preview')
 const stereoCanvas = element('stereo-canvas')
 const eyeFrames = [element('frame-left'), element('frame-right')] as const
 const previewEyes = element<HTMLFieldSetElement>('projection-eyes')
+const angleCircles = element<HTMLInputElement>('projection-angle-circles')
 const scenePanel = element('scene-panel')
 const sceneViewport = element('scene-viewport')
 const sceneLos = element('scene-los')
@@ -149,7 +150,7 @@ function draw(activeScene: Scene) {
   if (view === 'reprojected') {
     const eye = previewEyes.querySelector<HTMLInputElement>('input:checked')?.value === 'right' ? 1 : 0
     projectionKind.textContent = projection.selectedOptions[0].text
-    projectionView.update({ projection: mode, eye, revision, los }, pipeline.readProjection)
+    projectionView.update({ projection: mode, eye, revision, los, showAngleCircles: angleCircles.checked }, pipeline.readProjection)
   }
 }
 
@@ -217,6 +218,7 @@ file.addEventListener('change', () => {
 reference.addEventListener('change', () => void loadReference(reference.value))
 projection.addEventListener('change', schedule)
 previewEyes.addEventListener('change', schedule)
+angleCircles.addEventListener('change', schedule)
 sceneReset.addEventListener('click', () => explorer?.reset())
 
 for (const [index, tab] of tabs.entries()) {

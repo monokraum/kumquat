@@ -9,9 +9,11 @@ import {
 } from './advanced-projections'
 import { createReferenceCamera, eyeOffset, FACES, FRAME, IMAGE, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
+import { STEREOGRAPHIC_DISK_SIZE } from './projection-layout'
 import type { Projection } from './projection-layout'
 import { createProjectionReadback } from './projection-readback'
 import { cubemapSampler, FACE_SIZE, panoramaDirection, PANORAMA, panoramaSampler } from './projections'
+import { stereographicDirection, stereographicSampler } from './stereographic-projection'
 
 type ShaderValue = ReturnType<typeof vec3>
 export type StereoView = 'reprojected' | 'direct'
@@ -45,17 +47,20 @@ function createEye() {
   panoramaMaterial.fragmentNode = cube(panoramaDirection(screenCoordinate.xy))
   const equiangular = target(FACE_SIZE * EAC_COLUMNS, FACE_SIZE * (FACES.length / EAC_COLUMNS), false)
   const octahedral = target(OCTAHEDRAL_SIZE, OCTAHEDRAL_SIZE, false)
+  const stereographic = target(STEREOGRAPHIC_DISK_SIZE * 2, STEREOGRAPHIC_DISK_SIZE, false)
   return {
     faces,
     panorama,
     panoramaMaterial,
     equiangular,
     octahedral,
+    stereographic,
     samplers: {
       cubemap: cube,
       equirectangular: panoramaSampler(panorama.texture),
       equiangular: equiangularSampler(equiangular.texture),
       octahedral: octahedralSampler(octahedral.texture),
+      stereographic: stereographicSampler(stereographic.texture),
     },
     reference: target(IMAGE.width * 2, IMAGE.height * 2),
   }
@@ -63,11 +68,12 @@ function createEye() {
 
 export function createPipeline(renderer: WebGPURenderer) {
   const eyes = [createEye(), createEye()]
-  const readProjection = createProjectionReadback(renderer, eyes.map(({ faces, panorama, equiangular, octahedral }) => ({
+  const readProjection = createProjectionReadback(renderer, eyes.map(({ faces, panorama, equiangular, octahedral, stereographic }) => ({
     faces: faces.map(({ texture }) => texture),
     panorama: panorama.texture,
     equiangular: equiangular.texture,
     octahedral: octahedral.texture,
+    stereographic: stereographic.texture,
   })))
   const quad = new QuadMesh()
   // Each eye is packed before reusing these intermediate render targets for the other eye.
@@ -76,7 +82,15 @@ export function createPipeline(renderer: WebGPURenderer) {
   const equiangularMaterial = fullscreenMaterial()
   equiangularMaterial.fragmentNode = equiangularCapture(sourceTextures)(screenCoordinate.xy)
   const octahedralMaterial = fullscreenMaterial()
-  octahedralMaterial.fragmentNode = cubemapSampler(sourceTextures, PROJECTION_SOURCE_SIZE)(octahedralDirection(screenCoordinate.xy))
+  const sampleSource = cubemapSampler(sourceTextures, PROJECTION_SOURCE_SIZE)
+  octahedralMaterial.fragmentNode = sampleSource(octahedralDirection(screenCoordinate.xy))
+  const stereographicMaterial = fullscreenMaterial()
+  stereographicMaterial.fragmentNode = sampleSource(stereographicDirection(screenCoordinate.xy))
+  const packedMaterials = {
+    equiangular: equiangularMaterial,
+    octahedral: octahedralMaterial,
+    stereographic: stereographicMaterial,
+  }
   const faceCamera = new PerspectiveCamera(90, 1, 0.01, 10_000)
   const directCamera = createReferenceCamera()
   const center = new Vector3()
@@ -134,6 +148,7 @@ export function createPipeline(renderer: WebGPURenderer) {
     equirectangular: createComposite('equirectangular'),
     equiangular: createComposite('equiangular'),
     octahedral: createComposite('octahedral'),
+    stereographic: createComposite('stereographic'),
   }
 
   function captureFaces(scene: Scene, faces: RenderTarget[], index: number, baseline: number) {
@@ -156,12 +171,11 @@ export function createPipeline(renderer: WebGPURenderer) {
     }
     if (captured.has(projection)) return
 
-    if (projection === 'equiangular' || projection === 'octahedral') {
-      const material = projection === 'equiangular' ? equiangularMaterial : octahedralMaterial
+    if (projection !== 'cubemap' && projection !== 'equirectangular') {
       eyes.forEach((eye, index) => {
         captureFaces(scene, sourceFaces, index, baseline)
         renderer.setRenderTarget(eye[projection])
-        quad.material = material
+        quad.material = packedMaterials[projection]
         quad.render(renderer)
       })
     } else {

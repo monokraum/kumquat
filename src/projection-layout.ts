@@ -3,6 +3,7 @@ export const PROJECTION_MAP_LABELS = {
   equirectangular: 'Panorama équirectangulaire',
   equiangular: 'Cubemap équiangulaire en croix',
   octahedral: 'Carte octaédrique',
+  stereographic: 'Disques stéréographiques avant et arrière',
 }
 
 export type Projection = keyof typeof PROJECTION_MAP_LABELS
@@ -18,11 +19,15 @@ export function hasCubeFaces(projection: Projection) {
 
 export const PREVIEW_FACE_SIZE = 256
 export const PREVIEW_WIDTH = PREVIEW_FACE_SIZE * 4
+export const STEREOGRAPHIC_DISK_SIZE = 2048
+export const STEREOGRAPHIC_RADIUS = STEREOGRAPHIC_DISK_SIZE / 2 - 2
+export const STEREOGRAPHIC_PREVIEW_RADIUS = (PREVIEW_WIDTH / 2) * STEREOGRAPHIC_RADIUS / STEREOGRAPHIC_DISK_SIZE
 export const PREVIEW_HEIGHT = {
   cubemap: PREVIEW_FACE_SIZE * 3,
   equirectangular: PREVIEW_WIDTH / 2,
   equiangular: PREVIEW_FACE_SIZE * 3,
   octahedral: PREVIEW_WIDTH,
+  stereographic: PREVIEW_WIDTH / 2,
 }
 
 // Same order as the capture cameras in FACES, with the forward face at the center.

@@ -101,11 +101,14 @@ body[data-view="direct"] .stereo-panel { grid-template-rows: minmax(0, 1fr); ali
 .projection-header, .projection-title, .projection-actions, .projection-eyes { display: flex; align-items: center; }
 .projection-header { justify-content: space-between; flex-wrap: wrap; gap: .35rem .9rem; min-width: 0; }
 .projection-title, .projection-actions { gap: .65rem; }
+.projection-actions { flex-wrap: wrap; }
 .projection-title h2 { color: #ebebed; font-size: .8rem; font-weight: 575; white-space: nowrap; }
 #projection-kind, .frame-size { font: .73rem var(--mono); color: var(--muted); }
-.projection-legend, .projection-eyes { color: var(--muted); font-size: .73rem; white-space: nowrap; }
+.projection-legend, .projection-eyes, .projection-angle-circles { color: var(--muted); font-size: .73rem; white-space: nowrap; }
 .projection-legend { display: flex; align-items: center; gap: .4rem; }
 .projection-legend::before { content: ""; width: .8rem; height: 2px; background: var(--accent); }
+.projection-angle-circles { display: flex; align-items: center; gap: .3rem; cursor: pointer; }
+.projection-angle-circles input { margin: 0; accent-color: var(--amber); }
 .projection-eyes { gap: .35rem; }
 .projection-eyes label { cursor: pointer; }
 .projection-eyes input { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -113,7 +116,7 @@ body[data-view="direct"] .stereo-panel { grid-template-rows: minmax(0, 1fr); ali
 .projection-eyes input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .projection-area { display: grid; place-items: center; container-type: size; min-height: 0; margin-top: .45rem; }
 .projection-preview { position: relative; width: min(100%, calc(100cqh * 4 / 3)); aspect-ratio: 4 / 3; }
-.projection-preview[data-projection="equirectangular"] { width: min(100%, calc(100cqh * 2)); aspect-ratio: 2; }
+.projection-preview:is([data-projection="equirectangular"], [data-projection="stereographic"]) { width: min(100%, calc(100cqh * 2)); aspect-ratio: 2; }
 .projection-preview[data-projection="octahedral"] { width: min(100%, 100cqh); aspect-ratio: 1; }
 .projection-preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .projection-preview[data-state="ready"] { cursor: grab; touch-action: none; }
