@@ -10,13 +10,13 @@ Pour utiliser le serveur HTTP inclus, ouvrir un terminal dans le dossier `kumqua
 
 ## Utiliser le MVP
 
-La scène de calibration s’ouvre au démarrage. Le sélecteur de scènes de référence donne aussi accès au **Studio éclairé**. Utiliser **Ouvrir un GLB** ou déposer un fichier dans la zone principale pour charger un GLB autonome. L’application utilise les lumières du fichier quand elles sont présentes.
+La scène de calibration s’ouvre au démarrage. Le sélecteur de scènes de référence donne aussi accès au **Studio éclairé** et au **Canyon stylisé**. Utiliser **Ouvrir un GLB** ou déposer un fichier dans la zone principale pour charger un GLB autonome. L’application utilise les lumières du fichier quand elles sont présentes.
 
 Les onglets occupent la fenêtre sans défilement. Le bouton en haut à droite active le plein écran du navigateur.
 
 - **Vue reprojetée** affiche la carte et le champ de vision au-dessus des deux trames par œil, gauche puis droite. La carte s’ouvre sur l’œil gauche. Glisser directement sur la carte règle la visée et actualise les deux trames.
 - **Rendu direct** affiche les deux rendus directs suréchantillonnés. Les réglages de visée et d’écart interoculaire sont communs aux deux onglets. Régler la visée au clavier ou en glissant sur une trame. Un lacet positif vise vers la droite et un tangage positif vers le haut.
-- **Scène 3D** affiche la scène et les deux volumes de visée. Glisser pour orbiter, tenir Maj en glissant pour déplacer la caméra, utiliser la molette pour zoomer. **Recentrer** recadre la scène. La caméra d’inspection est indépendante des caméras d’analyse.
+- **Scène 3D** affiche la scène et les deux volumes de visée en vue globale. Glisser pour orbiter, tenir Maj en glissant pour déplacer la caméra, utiliser la molette pour zoomer. Choisir **Depuis le centre** pour regarder dans toutes les directions en glissant et se déplacer avec les flèches, **ZQSD** ou **WASD**. **Espace** et **Maj** règlent la hauteur. **Recentrer** réinitialise la caméra dans le mode actif et **Vue globale** revient à l’orbite. La caméra d’inspection est indépendante des caméras d’analyse.
 
 L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Les aperçus conservent ce rapport d’aspect. L’écart interoculaire par défaut est de 63 mm. Le rendu direct utilise quatre échantillons par pixel.
 
@@ -40,6 +40,7 @@ Active **Repères d’angle** dans la carte pour afficher les mêmes cercles de 
 6. Ouvrir **Scène 3D**. Tester les mouvements de caméra et le recentrage, puis revenir dans un onglet stéréo pour retrouver les réglages d’analyse.
 7. Choisir **Cubemap équiangulaire (EAC)** et vérifier le raccord à 45° de lacet. Choisir **Octaédrique**, viser à 179° de lacet puis glisser sur la carte. Le contour arrière se répartit près des coins du carré et les deux trames suivent la visée.
 8. Choisir **Stéréographique** et passer de 85° à 95° de lacet. Le contour se répartit entre les deux disques et les trames suivent le mouvement. Active **Repères d’angle** et compare le repère à 60° de tangage au même repère en équirectangulaire.
+9. Choisir **Canyon stylisé**, ouvrir **Scène 3D**, puis **Depuis le centre**. Regarder des deux côtés puis derrière soi en glissant. Avancer au clavier, se recentrer et revenir à la vue globale pour retrouver les volumes de visée.
 
 Si Chrome sous Linux affiche **Aucun adaptateur WebGPU**, vérifier que l’accélération graphique est activée dans `chrome://settings/system`, puis redémarrer Chrome. Consulter la ligne WebGPU et la section **Problems Detected** dans `chrome://gpu`. Le message de l’application indique à quelle étape le démarrage s’arrête.
 

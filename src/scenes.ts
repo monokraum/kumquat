@@ -5,6 +5,7 @@ const referenceFiles = import.meta.glob<string>('../references/*.glb', {
   eager: true, import: 'default', query: '?url',
 })
 const referenceNames: Record<string, string> = {
+  'canyon-stylise': 'Canyon stylisé',
   'reference-scene': 'Scène de calibration',
   'studio-eclaire': 'Studio éclairé',
 }

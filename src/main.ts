@@ -41,6 +41,9 @@ const scenePanel = element('scene-panel')
 const sceneViewport = element('scene-viewport')
 const sceneLos = element('scene-los')
 const sceneReset = element<HTMLButtonElement>('scene-reset')
+const sceneExplore = element<HTMLButtonElement>('scene-explore')
+const orbitGestures = element('scene-orbit-gestures')
+const walkGestures = element('scene-walk-gestures')
 const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#view-tabs [role=tab]'))
 const fullscreen = element<HTMLButtonElement>('fullscreen')
 const projectionView = createProjectionView(
@@ -82,6 +85,7 @@ function showView(next: WorkspaceView) {
   view = next
   document.body.dataset.view = view
   scenePanel.hidden = view !== 'scene'
+  explorer?.setActive(view === 'scene')
   stereoPanel.hidden = view === 'scene'
   stereoControls.hidden = view === 'scene'
   mapPanel.hidden = view !== 'reprojected'
@@ -188,6 +192,7 @@ async function load(name: string, source: () => Promise<ArrayBuffer>, referenceI
     viewport.dataset.ready = 'true'
     previewEyes.disabled = false
     sceneReset.disabled = false
+    sceneExplore.disabled = false
     message('')
   } catch (error) {
     if (version === loadVersion) {
@@ -219,7 +224,23 @@ reference.addEventListener('change', () => void loadReference(reference.value))
 projection.addEventListener('change', schedule)
 previewEyes.addEventListener('change', schedule)
 angleCircles.addEventListener('change', schedule)
-sceneReset.addEventListener('click', () => explorer?.reset())
+sceneReset.addEventListener('click', () => {
+  explorer?.reset()
+  if (scenePanel.dataset.cameraMode === 'walk') sceneViewport.focus({ preventScroll: true })
+})
+sceneExplore.addEventListener('click', () => {
+  const walking = scenePanel.dataset.cameraMode === 'orbit'
+  explorer?.setWalking(walking)
+  if (walking) sceneViewport.focus({ preventScroll: true })
+})
+
+function updateSceneCameraMode(walking: boolean) {
+  scenePanel.dataset.cameraMode = walking ? 'walk' : 'orbit'
+  sceneExplore.textContent = walking ? 'Vue globale' : 'Depuis le centre'
+  orbitGestures.hidden = walking
+  walkGestures.hidden = !walking
+  sceneViewport.setAttribute('aria-describedby', walking ? walkGestures.id : orbitGestures.id)
+}
 
 for (const [index, tab] of tabs.entries()) {
   tab.addEventListener('click', () => showView(tab.dataset.view as WorkspaceView))
@@ -382,6 +403,8 @@ async function start() {
     controls.disabled = true
     previewEyes.disabled = true
     sceneReset.disabled = true
+    sceneExplore.disabled = true
+    explorer?.setActive(false)
     projectionView.reset()
     viewport.dataset.ready = 'false'
     backend.textContent = 'WebGPU interrompu'
@@ -389,7 +412,8 @@ async function start() {
     message('Le périphérique WebGPU a été perdu. Rechargez la page pour relancer le rendu.', true)
   }
   pipeline = createPipeline(gpu)
-  explorer = createSceneExplorer(gpu, sceneViewport, schedule)
+  explorer = createSceneExplorer(gpu, sceneViewport, schedule, updateSceneCameraMode)
+  explorer.setActive(view === 'scene')
   gpu.domElement.setAttribute('aria-hidden', 'true')
   backend.textContent = software ? 'WebGPU logiciel' : 'WebGPU actif'
   backendBadge.dataset.state = 'ready'

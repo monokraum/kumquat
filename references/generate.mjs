@@ -16,6 +16,7 @@ import {
   Vector3,
 } from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { createStylizedCanyon } from './stylized-canyon.mjs'
 
 // The texture-free binary export reads its generated blobs through FileReader.
 globalThis.FileReader ??= class {
@@ -154,3 +155,4 @@ async function writeGlb(source, filename) {
 
 await writeGlb(scene, './reference-scene.glb')
 await writeGlb(studio, './studio-eclaire.glb')
+await writeGlb(createStylizedCanyon(), './canyon-stylise.glb')

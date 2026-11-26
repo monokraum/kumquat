@@ -1,6 +1,6 @@
 # Scènes de référence
 
-Les deux fichiers GLB contiennent leurs géométries, matériaux et lumières. Le repère est en mètres, avec **+Y vers le haut** et **−Z vers l’avant**. L’origine est le point de vue nominal.
+Les fichiers GLB contiennent leurs géométries et matériaux. Le repère est en mètres, avec **+Y vers le haut** et **−Z vers l’avant**. L’origine est le point de vue nominal.
 
 ## Calibration
 
@@ -23,6 +23,10 @@ Chaque panneau possède un réticule central, un coin coloré et une série de m
 ## Studio éclairé
 
 `studio-eclaire.glb` réunit une sphère mate, un nœud torique brillant et des volumes à plusieurs distances. Deux lumières directionnelles et une lumière ponctuelle permettent de comparer le relief et les reflets dans les deux branches de rendu.
+
+## Canyon stylisé
+
+`canyon-stylise.glb` représente un terrain carré de 112 × 112 m. Au centre, le sol est à environ 1,65 m sous le point de vue nominal. Des empilements de grès, du sable et des buissons bas occupent le bassin, avec des falaises à distance. Le générateur Three.js `stylized-canyon.mjs` construit les facettes et leurs couleurs par code.
 
 ## Régénérer les GLB
 
