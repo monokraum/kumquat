@@ -151,8 +151,10 @@ body[data-view="direct"] .stereo-pair { height: min(100cqh, calc((100cqw - var(-
 .scene-legend > span { display: flex; align-items: center; gap: .3rem; white-space: nowrap; }
 .scene-los { top: .85rem; right: .85rem; font-family: var(--mono); pointer-events: none; }
 .scene-los output { color: #ebebed; white-space: nowrap; }
+.scene-panel[data-camera-mode="walk"] :is(.scene-legend, .scene-los) { display: none; }
 .scene-actions { bottom: .85rem; left: 50%; transform: translateX(-50%); max-width: calc(100% - 1.7rem); width: max-content; }
 .scene-actions button { color: #ebebed; }
+.scene-actions button + button { padding-left: .65rem; border-left: 1px solid var(--line); }
 .scene-actions button span { margin-right: .25rem; }
 .scene-gestures { min-width: 0; padding-left: .65rem; border-left: 1px solid var(--line); }
 .render-status { position: absolute; z-index: 5; inset: auto .8rem .75rem auto; max-width: min(36rem,calc(100% - 1.6rem)); background: #141417; border: 1px solid var(--line); border-radius: 7px; padding: .55rem .75rem; font-size: .78rem; }

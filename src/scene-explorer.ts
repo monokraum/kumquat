@@ -1,11 +1,12 @@
 import {
-  Box3, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, GridHelper, Group, LineBasicMaterial,
-  LineSegments, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, Sphere, SphereGeometry, Vector3,
+  Box3, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, GridHelper, Group, InstancedMesh, LineBasicMaterial,
+  LineSegments, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SkinnedMesh, Sphere, SphereGeometry, Vector3,
 } from 'three/webgpu'
-import type { WebGPURenderer } from 'three/webgpu'
+import type { Object3D, WebGPURenderer } from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { eyeOffset, imageBorderRays, orientationFor } from './camera'
 import type { LineOfSight } from './camera'
+import { createSceneWalkControls } from './scene-walk-controls'
 
 const origin = new Vector3()
 const orbitDirection = new Vector3(0.92, 0.66, 1).normalize()
@@ -55,42 +56,103 @@ function createCameraRig() {
   }
 }
 
-export function createSceneExplorer(renderer: WebGPURenderer, viewport: HTMLElement, schedule: () => void) {
+function getInspectionBounds(scene: Scene, helpers: Object3D[]) {
+  const bounds = new Box3()
+  if (!helpers.length) return bounds.setFromObject(scene)
+
+  const localBounds = new Box3()
+  function include(object: Object3D) {
+    if (object.userData.excludeFromInspectionBounds === true) return
+    if (object instanceof SkinnedMesh || object instanceof InstancedMesh) {
+      if (!object.boundingBox) object.computeBoundingBox()
+      if (object.boundingBox) bounds.union(localBounds.copy(object.boundingBox).applyMatrix4(object.matrixWorld))
+    } else if ('geometry' in object && object.geometry instanceof BufferGeometry) {
+      const geometry = object.geometry
+      if (!geometry.boundingBox) geometry.computeBoundingBox()
+      if (geometry.boundingBox) bounds.union(localBounds.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld))
+    }
+    object.children.forEach(include)
+  }
+
+  scene.updateWorldMatrix(true, true)
+  include(scene)
+  return bounds
+}
+
+export function createSceneExplorer(
+  renderer: WebGPURenderer, viewport: HTMLElement, schedule: () => void, onWalkModeChange: (walking: boolean) => void,
+) {
   const stage = new Scene()
   stage.background = new Color('#0c121e')
   const camera = new PerspectiveCamera(43, 1, 0.01, 10_000)
   const controls = new OrbitControls(camera, viewport)
   controls.listenToKeyEvents(viewport)
   controls.addEventListener('change', schedule)
+  controls.enabled = false
+  const walkCamera = new PerspectiveCamera(camera.fov, 1, 0.03, 10_000)
+  const walkControls = createSceneWalkControls(walkCamera, viewport, schedule)
   const grid = new GridHelper(2, 24, 0x526073, 0x263140)
   const rig = createCameraRig()
   stage.add(grid, rig.group)
 
-  const bounds = new Box3()
   const sphere = new Sphere()
   let activeScene: Scene | undefined
+  let inspectionHelpers: Object3D[] = []
   let radius = 1
   let fitPending = true
+  let active = false
+  let walking = false
+
+  function setActive(value: boolean) {
+    active = value
+    controls.enabled = active && !walking
+    walkControls.setEnabled(active && walking)
+  }
+
+  function setWalking(value: boolean) {
+    if (walking === value) return
+    walking = value
+    if (walking) walkControls.reset()
+    setActive(active)
+    grid.visible = rig.group.visible = !walking
+    onWalkModeChange(walking)
+    schedule()
+  }
 
   function setScene(scene: Scene) {
     if (activeScene === scene) return
     if (activeScene) stage.remove(activeScene)
     activeScene = scene
     stage.add(scene)
-    bounds.setFromObject(scene).expandByPoint(origin).getBoundingSphere(sphere)
+    inspectionHelpers = []
+    scene.traverse((object) => {
+      if (object.userData.excludeFromInspectionBounds === true) inspectionHelpers.push(object)
+    })
+    getInspectionBounds(scene, inspectionHelpers).expandByPoint(origin).getBoundingSphere(sphere)
     radius = Math.max(sphere.radius, 0.1)
     grid.scale.setScalar(radius * 1.25)
     grid.position.y = -radius * .12
     fitPending = true
+    setWalking(false)
   }
 
   function reset() {
-    fitPending = true
+    if (walking) walkControls.reset()
+    else fitPending = true
     schedule()
   }
 
   function draw(scene: Scene, los: LineOfSight, baseline: number, aspect: number) {
     setScene(scene)
+    renderer.setRenderTarget(null)
+    if (walking) {
+      walkControls.update()
+      walkCamera.aspect = aspect
+      walkCamera.updateProjectionMatrix()
+      renderer.render(stage, walkCamera)
+      return
+    }
+
     if (fitPending) {
       fitPending = false
       const verticalFov = camera.fov * Math.PI / 360
@@ -107,9 +169,14 @@ export function createSceneExplorer(renderer: WebGPURenderer, viewport: HTMLElem
     camera.updateProjectionMatrix()
     controls.update()
     rig.update(los, baseline, radius)
-    renderer.setRenderTarget(null)
-    renderer.render(stage, camera)
+    const hidden = inspectionHelpers.filter(({ visible }) => visible)
+    hidden.forEach((object) => { object.visible = false })
+    try {
+      renderer.render(stage, camera)
+    } finally {
+      hidden.forEach((object) => { object.visible = true })
+    }
   }
 
-  return { setScene, draw, reset }
+  return { setScene, setActive, setWalking, draw, reset }
 }
