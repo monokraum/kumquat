@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kumquat · Projection DAS</title>
-    <script defer src="./assets/index-CVsC2F3B.js"></script>
-    <link rel="stylesheet" href="./assets/style-Dwt6SKzi.css">
+    <script defer src="./assets/index-D2XhfujZ.js"></script>
+    <link rel="stylesheet" href="./assets/style-zyr3KHv5.css">
   </head>
   <body data-view="reprojected">
     <header class="app-header">
@@ -117,8 +117,8 @@
         </div>
       </section>
 
-      <section id="scene-panel" class="scene-panel surface" role="tabpanel" aria-labelledby="tab-scene" hidden>
-        <div id="scene-viewport" class="scene-viewport" tabindex="0" aria-label="Caméra libre dans la scène 3D"></div>
+      <section id="scene-panel" class="scene-panel surface" role="tabpanel" aria-labelledby="tab-scene" data-camera-mode="orbit" hidden>
+        <div id="scene-viewport" class="scene-viewport" tabindex="0" aria-label="Caméra libre dans la scène 3D" aria-describedby="scene-orbit-gestures"></div>
         <div class="scene-hud scene-legend">
           <strong>Caméra libre</strong>
           <span><span class="eye-dot left" aria-hidden="true"></span>Œil gauche</span>
@@ -127,7 +127,9 @@
         <div class="scene-hud scene-los"><span>Ligne de visée</span><output id="scene-los" aria-label="Lacet, tangage et roulis">0° · 0° · 0°</output></div>
         <div class="scene-hud scene-actions">
           <button id="scene-reset" type="button" class="text-button" disabled><span aria-hidden="true">↶</span> Recentrer</button>
-          <span class="scene-gestures">Glisser pour orbiter · Maj + glisser pour déplacer · Molette pour zoomer</span>
+          <button id="scene-explore" type="button" class="text-button" disabled>Depuis le centre</button>
+          <span id="scene-orbit-gestures" class="scene-gestures">Glisser pour orbiter · Maj + glisser pour déplacer · Molette pour zoomer</span>
+          <span id="scene-walk-gestures" class="scene-gestures" hidden>Glisser pour regarder · ZQSD, WASD ou flèches pour se déplacer · Espace et Maj pour monter ou descendre</span>
         </div>
       </section>
       <p id="render-status" class="render-status" role="status">Initialisation du rendu…</p>
