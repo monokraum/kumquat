@@ -1,4 +1,5 @@
 import type { LineOfSight } from './camera'
+import { createProjectionDensityTile } from './projection-density'
 import { projectionAngleCircles, projectionFootprint } from './projection-footprint'
 import {
   CUBE_CROSS, hasCubeFaces, PREVIEW_FACE_SIZE, PREVIEW_HEIGHT, PREVIEW_WIDTH, PROJECTION_MAP_LABELS,
@@ -13,6 +14,7 @@ interface PreviewSettings {
   revision: number
   los: LineOfSight
   showAngleCircles: boolean
+  showDensity: boolean
 }
 
 export function createProjectionView(
@@ -29,6 +31,7 @@ export function createProjectionView(
   let reading = false
   let pending: { settings: PreviewSettings; generation: number; read: ReturnType<typeof createProjectionReadback> } | undefined
   const angleCircles = new Map<Projection, ReturnType<typeof projectionAngleCircles>>()
+  const densityTiles = new Map<Projection, ImageData>()
 
   function strokePaths(paths: ReturnType<typeof projectionFootprint>, color: string) {
     overlay.beginPath()
@@ -99,6 +102,30 @@ export function createProjectionView(
     background.fillText('Arrière', PREVIEW_HEIGHT.stereographic + 12, 12)
   }
 
+  function finishBackground(projection: Projection) {
+    if (hasCubeFaces(projection)) labelFaces()
+    else if (projection === 'stereographic') labelHemispheres()
+    viewport.dataset.state = 'ready'
+    status.textContent = ''
+  }
+
+  function drawDensity(projection: Projection) {
+    let tile = densityTiles.get(projection)
+    if (!tile) {
+      tile = createProjectionDensityTile(projection)
+      densityTiles.set(projection, tile)
+    }
+    if (hasCubeFaces(projection)) {
+      for (const { column, row } of CUBE_CROSS) {
+        background.putImageData(tile, column * tile.width, row * tile.height)
+      }
+    } else {
+      background.putImageData(tile, 0, 0)
+      if (projection === 'stereographic') background.putImageData(tile, tile.width, 0)
+    }
+    finishBackground(projection)
+  }
+
   async function readPending() {
     if (reading) return
     reading = true
@@ -112,10 +139,7 @@ export function createProjectionView(
         const image = background.createImageData(map.width, map.height)
         image.data.set(pixels)
         background.putImageData(image, 0, 0)
-        if (hasCubeFaces(projection)) labelFaces()
-        else if (projection === 'stereographic') labelHemispheres()
-        viewport.dataset.state = 'ready'
-        status.textContent = ''
+        finishBackground(projection)
       } catch (error) {
         if (job.generation !== generation) continue
         console.error(error)
@@ -127,19 +151,28 @@ export function createProjectionView(
   }
 
   function update(settings: PreviewSettings, read: ReturnType<typeof createProjectionReadback>) {
-    const { projection, eye, revision } = settings
-    const source = `${projection}:${eye}:${revision}`
+    const { projection, eye, revision, showDensity } = settings
+    const source = showDensity ? `density:${projection}` : `${projection}:${eye}:${revision}`
     if (source !== key) {
       key = source
+      generation++
+      pending = undefined
       viewport.dataset.projection = projection
-      viewport.dataset.state = 'loading'
-      status.textContent = 'Chargement de la carte…'
       map.width = outline.width = PREVIEW_WIDTH
       map.height = outline.height = PREVIEW_HEIGHT[projection]
       const layout = PROJECTION_MAP_LABELS[projection]
-      map.setAttribute('aria-label', `${layout} et champ de vision de l’œil ${eye === 0 ? 'gauche' : 'droit'}`)
-      pending = { settings, generation: ++generation, read }
-      void readPending()
+      if (showDensity) {
+        map.setAttribute('aria-label', `${layout}, densité de pixels et champ de vision`)
+        map.setAttribute('aria-describedby', 'projection-density-legend')
+        drawDensity(projection)
+      } else {
+        map.setAttribute('aria-label', `${layout} et champ de vision de l’œil ${eye === 0 ? 'gauche' : 'droit'}`)
+        map.removeAttribute('aria-describedby')
+        viewport.dataset.state = 'loading'
+        status.textContent = 'Chargement de la carte…'
+        pending = { settings, generation, read }
+        void readPending()
+      }
     }
     drawOutline(settings)
   }

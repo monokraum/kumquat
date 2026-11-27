@@ -7,6 +7,7 @@ import { isProjection } from './projection-layout'
 import { createProjectionView } from './projection-view'
 import { createSceneExplorer } from './scene-explorer'
 import { defaultReference, disposeScene, readScene, referenceBytes, referenceScenes } from './scenes'
+import { projectionDensityGradient } from './projection-density'
 import './style.css'
 
 function element<T extends HTMLElement>(id: string) {
@@ -37,6 +38,9 @@ const stereoCanvas = element('stereo-canvas')
 const eyeFrames = [element('frame-left'), element('frame-right')] as const
 const previewEyes = element<HTMLFieldSetElement>('projection-eyes')
 const angleCircles = element<HTMLInputElement>('projection-angle-circles')
+const densityToggle = element<HTMLButtonElement>('projection-density')
+const densityLegend = element('projection-density-legend')
+element('projection-density-ramp').style.backgroundImage = projectionDensityGradient
 const scenePanel = element('scene-panel')
 const sceneViewport = element('scene-viewport')
 const sceneLos = element('scene-los')
@@ -61,6 +65,7 @@ let scene: Scene | undefined
 let activeReference = ''
 let loadVersion = 0
 let scheduled = false
+let showDensity = false
 
 for (const { id, label } of referenceScenes) {
   reference.add(new Option(label, id))
@@ -154,7 +159,9 @@ function draw(activeScene: Scene) {
   if (view === 'reprojected') {
     const eye = previewEyes.querySelector<HTMLInputElement>('input:checked')?.value === 'right' ? 1 : 0
     projectionKind.textContent = projection.selectedOptions[0].text
-    projectionView.update({ projection: mode, eye, revision, los, showAngleCircles: angleCircles.checked }, pipeline.readProjection)
+    projectionView.update({
+      projection: mode, eye, revision, los, showAngleCircles: angleCircles.checked, showDensity,
+    }, pipeline.readProjection)
   }
 }
 
@@ -190,7 +197,8 @@ async function load(name: string, source: () => Promise<ArrayBuffer>, referenceI
     sceneName.textContent = referenceId && referenceId === defaultReference?.id ? 'Scène de référence' : name
     sceneName.title = name
     viewport.dataset.ready = 'true'
-    previewEyes.disabled = false
+    previewEyes.disabled = showDensity
+    densityToggle.disabled = false
     sceneReset.disabled = false
     sceneExplore.disabled = false
     message('')
@@ -224,6 +232,13 @@ reference.addEventListener('change', () => void loadReference(reference.value))
 projection.addEventListener('change', schedule)
 previewEyes.addEventListener('change', schedule)
 angleCircles.addEventListener('change', schedule)
+densityToggle.addEventListener('click', () => {
+  showDensity = !showDensity
+  densityToggle.setAttribute('aria-pressed', String(showDensity))
+  densityLegend.hidden = !showDensity
+  previewEyes.disabled = showDensity
+  schedule()
+})
 sceneReset.addEventListener('click', () => {
   explorer?.reset()
   if (scenePanel.dataset.cameraMode === 'walk') sceneViewport.focus({ preventScroll: true })
@@ -402,6 +417,8 @@ async function start() {
     sceneControls.disabled = true
     controls.disabled = true
     previewEyes.disabled = true
+    densityToggle.disabled = true
+    densityLegend.hidden = true
     sceneReset.disabled = true
     sceneExplore.disabled = true
     explorer?.setActive(false)
