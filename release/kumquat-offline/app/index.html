@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kumquat · Projection DAS</title>
-    <script defer src="./assets/index-D2XhfujZ.js"></script>
-    <link rel="stylesheet" href="./assets/style-zyr3KHv5.css">
+    <script defer src="./assets/index-48Z6mEAg.js"></script>
+    <link rel="stylesheet" href="./assets/style-CTcPxMCu.css">
   </head>
   <body data-view="reprojected">
     <header class="app-header">
@@ -79,6 +79,7 @@
             <div class="projection-actions">
               <p class="projection-legend">Champ de la caméra</p>
               <label class="projection-angle-circles"><input id="projection-angle-circles" type="checkbox">Repères d’angle</label>
+              <button id="projection-density" class="text-button projection-density-toggle" type="button" aria-pressed="false" aria-controls="projection-map projection-density-legend" disabled>Densité</button>
               <fieldset id="projection-eyes" class="projection-eyes" disabled>
                 <legend class="sr-only">Œil affiché sur la carte</legend>
                 <label><input type="radio" name="projection-eye" value="left" checked><span>Œil gauche</span></label>
@@ -92,6 +93,13 @@
               <canvas id="projection-map" role="img" aria-label="Carte de projection" width="1024" height="768"></canvas>
               <canvas id="projection-outline" aria-hidden="true" width="1024" height="768"></canvas>
               <p id="projection-status" class="projection-status" role="status">Chargement de la carte…</p>
+            </div>
+          </div>
+          <div id="projection-density-legend" class="projection-density-legend" hidden>
+            <span aria-label="pixels par stéradian">px/sr</span>
+            <div>
+              <div id="projection-density-ramp" class="projection-density-ramp" aria-hidden="true"></div>
+              <div class="projection-density-ticks"><span>250 k</span><span>500 k</span><span>1 M</span><span>≥ 2 M</span></div>
             </div>
           </div>
         </section>

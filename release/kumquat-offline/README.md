@@ -30,6 +30,8 @@ L’image active de 1600 × 1024 est centrée dans une trame de 1920 × 1080. Le
 
 Active **Repères d’angle** dans la carte pour afficher les mêmes cercles de rayon angulaire de 6° sur les cinq projections. Compare leur forme en passant de **Stéréographique** à **Équirectangulaire**. Les cercles stéréographiques gardent leur forme et leur taille varie selon leur emplacement. Un repère à cheval sur les deux hémisphères apparaît sur les deux disques.
 
+Active **Densité** dans la carte pour comparer le nombre de pixels de texture par stéradian. L’échelle reste identique entre les cinq projections. Les teintes chaudes indiquent les zones les plus denses et la dernière couleur regroupe les valeurs à partir de deux millions de pixels par stéradian.
+
 ## Vérifier le poste cible
 
 1. Couper l’accès réseau externe, ouvrir `app/index.html` et contrôler **WebGPU actif**. Dans `edge://gpu` ou `chrome://gpu`, vérifier que WebGPU est **Hardware accelerated**.
